@@ -361,6 +361,27 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .photo-viewer.on{display:flex;}
 .photo-viewer img{max-width:100%;max-height:100%;}
 .photo-viewer .close{position:absolute;top:1rem;right:1rem;color:#fff;font-size:24px;background:none;border:none;cursor:pointer;}
+/* Backup reminder banner */
+.bk-banner{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,var(--amber-bg),var(--red-bg));border:.5px solid var(--amber);border-radius:8px;padding:.6rem .8rem;margin-bottom:.75rem;display:none;align-items:center;gap:.6rem;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.bk-banner.show{display:flex;}
+.bk-banner.urgent{background:linear-gradient(90deg,var(--red-bg),var(--red-bg));border-color:var(--red);}
+.bk-banner-icon{font-size:20px;flex-shrink:0;}
+.bk-banner-text{flex:1;font-size:12px;line-height:1.3;color:var(--text);}
+.bk-banner-text strong{display:block;font-size:13px;color:var(--amber-text);margin-bottom:1px;}
+.bk-banner.urgent .bk-banner-text strong{color:var(--red-text);}
+.bk-banner-btn{background:var(--green);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;}
+.bk-banner-btn:active{transform:scale(.96);}
+.bk-banner-close{background:transparent;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0;}
+/* Backup management list v Tools */
+.bk-item{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:8px;border-bottom:.5px solid var(--border);font-size:12px;}
+.bk-item:last-child{border-bottom:none;}
+.bk-item-l{flex:1;min-width:0;}
+.bk-item-date{color:var(--text);font-weight:500;}
+.bk-item-meta{color:var(--text3);font-size:10px;margin-top:2px;}
+.bk-item-r{display:flex;gap:4px;}
+.bk-item-btn{background:var(--bg3);border:.5px solid var(--border2);color:var(--text);font-size:14px;padding:4px 10px;border-radius:5px;cursor:pointer;}
+.bk-item-btn:active{transform:scale(.95);}
+.bk-item-btn.del{color:var(--red-text);border-color:var(--red);}
 .set-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px;}
 .set-row:last-child{border-bottom:none;}
 .set-row .sl-l{color:var(--text2);}
@@ -389,6 +410,14 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <div class="nt" onclick="showPage('body')">Mere</div>
   <div class="nt" onclick="showPage('stats')">Stats</div>
   <div class="nt" onclick="showPage('tools')">Tools</div>
+</div>
+
+<!-- BACKUP REMINDER BANNER -->
+<div class="bk-banner" id="bk-banner">
+  <div class="bk-banner-icon">💾</div>
+  <div class="bk-banner-text" id="bk-banner-text"></div>
+  <button class="bk-banner-btn" onclick="doWeeklyBackup()">Backup zdaj</button>
+  <button class="bk-banner-close" onclick="snoozeBackup()" title="Spomni jutri">×</button>
 </div>
 
 <!-- WORKOUT PAGE -->
@@ -560,6 +589,17 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
+  <div class="card">
+    <div class="ct">💾 Backup</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Tedensko app samodejno shrani backup v napravo (preživi PWA reinstall). Občasno prenesi <strong>JSON v Drive/iCloud</strong> za varnost.</div>
+    <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;">
+      <button class="sb" onclick="doWeeklyBackup()">⬇ Prenesi backup zdaj</button>
+      <button class="sb" onclick="manualAutoBackup()" style="background:var(--bg3);">+ Shrani v napravi</button>
+      <button class="sb" onclick="importData()" style="background:var(--bg3);">⬆ Obnovi iz datoteke</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni avto-backupi (zadnjih 4):</div>
+    <div id="backup-list"></div>
+  </div>
   <div class="card">
     <div class="ct">Nastavitve alarma</div>
     <div class="set-row"><span class="sl-l">🔊 Zvok</span><div class="toggle-sw" id="tg-sound" onclick="toggleAlarmOpt('sound')"></div></div>
@@ -862,7 +902,7 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initPlates();initGSUrl();initAlarmUI();initCollarsUI();}
+  if(p==='tools'){initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();}
   if(p==='gymlog'){renderSessHist();renderRestPlan();renderWeeklySummary();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
@@ -1687,6 +1727,9 @@ async function syncSessionSetsToSheets(session){
       const key=sdk(cn,w,dayIdx,ei);
       if(all[key]){
         all[key].filter(s=>s.kg&&s.reps&&s.done).forEach((s,si)=>{
+          const kg=parseFloat(s.kg)||0;
+          const reps=parseInt(s.reps)||0;
+          const e1rm=Math.round(kg*(1+reps/30));
           setsToSync.push({
             date:session.date,
             cycle:cn,
@@ -1694,8 +1737,13 @@ async function syncSessionSetsToSheets(session){
             day:session.dayName,
             exercise:e.n,
             setNum:si+1,
-            kg:parseFloat(s.kg)||0,
-            reps:parseInt(s.reps)||0
+            kg:kg,
+            kgR:parseFloat(s.kgR)||0,  // bilateral desna stran
+            reps:reps,
+            e1rm:e1rm,
+            rpe:s.rpe||'',
+            isDrop:s.drop?'Y':'',
+            note:s.note||''
           });
         });
       }
@@ -1981,10 +2029,13 @@ function calcWU(){
   res.classList.add('visible');
 }
 
-function exportData(){
+async function exportData(){
+  // Najprej zberi photos iz IndexedDB
+  let photos=[];
+  try{photos=await getAllPhotos();}catch(e){console.warn('Ni fotografij:',e);}
   // Export kot JSON — ohrani vse podatke popolnoma
   const backup={
-    version:1,
+    version:2,
     date:new Date().toISOString(),
     sets:getSets(),
     pr:getPRs(),
@@ -1998,7 +2049,14 @@ function exportData(){
     restplan:getRestPlan(),
     setcounts:getSetCounts(),
     bwgoal:getBWGoal(),
-    theme:localStorage.getItem(LS.theme)||'dark'
+    theme:localStorage.getItem(LS.theme)||'dark',
+    // Nove dodatne nastavitve
+    alarm:getAlarmSettings(),
+    bilateral:getBilatList(),
+    collars:getCollars(),
+    photos:photos,  // [{id, date, blob (base64)}]
+    swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
+    sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}')
   };
   const json=JSON.stringify(backup,null,2);
   const blob=new Blob([json],{type:'application/json'});
@@ -2007,8 +2065,11 @@ function exportData(){
   a.href=url;
   a.download=`workout_backup_${new Date().toISOString().split('T')[0]}.json`;
   a.click();URL.revokeObjectURL(url);
+  // Zapomnimo si datum zadnjega backupa
+  localStorage.setItem('wt_last_backup',new Date().toISOString());
   // Also export CSV for readability
   exportCSV();
+  toast('💾 Backup prenesen','ok');
 }
 
 function exportCSV(){
@@ -2034,12 +2095,12 @@ function importData(){
   input.onchange=e=>{
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>{
+    reader.onload=async ev=>{
       try{
         const backup=JSON.parse(ev.target.result);
         if(!backup.version||!backup.sets){alert('Napačna datoteka. Izberi workout_backup_*.json');return;}
-        if(!confirm(`Uvozi backup iz ${backup.date.split('T')[0]}? Trenutni podatki bodo prepisani.`))return;
-        // Restore all data
+        if(!confirm(`Uvozi backup iz ${backup.date.split('T')[0]} (v${backup.version})? Trenutni podatki bodo prepisani.`))return;
+        // Restore vse podatke
         if(backup.sets) lss(LS.sets,backup.sets);
         if(backup.pr) lss(LS.pr,backup.pr);
         if(backup.notes) lss(LS.notes,backup.notes);
@@ -2053,6 +2114,26 @@ function importData(){
         if(backup.setcounts) lss(LS.setcounts,backup.setcounts);
         if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
         if(backup.theme) lss(LS.theme,backup.theme);
+        // Nove nastavitve (v2)
+        if(backup.alarm) saveAlarmSettings(backup.alarm);
+        if(backup.bilateral) localStorage.setItem(BILAT_KEY,JSON.stringify(backup.bilateral));
+        if(backup.collars!==undefined) setCollars(backup.collars);
+        if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
+        if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
+        // Photos restore (IndexedDB)
+        if(backup.photos&&Array.isArray(backup.photos)&&backup.photos.length>0){
+          if(confirm(`Backup vsebuje ${backup.photos.length} fotografij. Naloži tudi fotografije?\n(Trenutne fotografije bodo zamenjane)`)){
+            try{
+              const db=await openPhotoDB();
+              // Počisti obstoječe
+              await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});
+              // Dodaj nove
+              for(const p of backup.photos){
+                await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date,blob:p.blob});tx.oncomplete=res;});
+              }
+            }catch(err){console.warn('Photo restore napaka:',err);}
+          }
+        }
         // Refresh UI
         initTheme();initBWGoal();
         cw=0;cd=0;
@@ -2097,8 +2178,13 @@ function initGSUrl(){
 async function sendToSheets(type,data){
   const url=getGSUrl();if(!url)return;
   try{
-    const payload=encodeURIComponent(JSON.stringify({type,data,timestamp:new Date().toISOString()}));
-    await fetch(`${url}?payload=${payload}`,{method:'GET',mode:'no-cors'});
+    // POST namesto GET — odpravi 8000-znakovni URL limit
+    await fetch(url,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({type,data,timestamp:new Date().toISOString()})
+    });
     return true;
   }catch(e){console.log('Sheets sync error:',e);return false;}
 }
@@ -2109,7 +2195,11 @@ async function testGSConnection(){
   if(!url){alert('Najprej shrani Apps Script URL.');return;}
   el.textContent='● Pošiljam...';el.style.color='var(--blue-text)';
   try{
-    await fetch(`${url}?payload=${encodeURIComponent(JSON.stringify({type:'test',data:'ping'}))}`,{method:'GET',mode:'no-cors'});
+    await fetch(url,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({type:'test',data:'ping',timestamp:new Date().toISOString()})
+    });
     el.textContent='● Poslano — preveri Sheet';el.style.color='var(--green-text)';
   }catch(e){
     el.textContent='● Napaka: '+e.message;el.style.color='var(--red-text)';
@@ -2122,14 +2212,19 @@ async function syncAllToSheets(){
   const el=document.getElementById('gs-status');
   el.textContent='● Pošiljam...';el.style.color='var(--blue-text)';
   try{
-    const payload=encodeURIComponent(JSON.stringify({
-      type:'full_backup',
-      data:{bw:getBW(),sessions:getSessions(),prs:getPRs(),meas:getMeas(),cycle:getCyc()},
-      timestamp:new Date().toISOString()
-    }));
-    await fetch(`${url}?payload=${payload}`,{method:'GET',mode:'no-cors'});
+    // Full backup z VSEMI podatki (brez photos — preveliko)
+    const data={
+      bw:getBW(),sessions:getSessions(),prs:getPRs(),meas:getMeas(),
+      cycle:getCyc(),sets:getSets(),notes:getNotes(),restplan:getRestPlan()
+    };
+    await fetch(url,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({type:'full_backup',data,timestamp:new Date().toISOString()})
+    });
     el.textContent='● Poslano ✓ '+new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
     el.style.color='var(--green-text)';
+    localStorage.setItem('wt_last_sheets_sync',new Date().toISOString());
   }catch(e){
     el.textContent='● Napaka: '+e.message;el.style.color='var(--red-text)';
   }
@@ -2602,13 +2697,18 @@ function renderBodyReadiness(){
 }
 
 // --- Photos (IndexedDB) ---
-const DB_NAME='wt_photos',DB_STORE='photos';
+const DB_NAME='wt_photos',DB_STORE='photos',BK_STORE='backups';
 let _db=null;
 function openPhotoDB(){
   return new Promise((res,rej)=>{
     if(_db)return res(_db);
-    const r=indexedDB.open(DB_NAME,1);
-    r.onupgradeneeded=()=>{r.result.createObjectStore(DB_STORE,{keyPath:'id',autoIncrement:true});};
+    // Verzija 2 — dodam backups store
+    const r=indexedDB.open(DB_NAME,2);
+    r.onupgradeneeded=(ev)=>{
+      const db=r.result;
+      if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE,{keyPath:'id',autoIncrement:true});
+      if(!db.objectStoreNames.contains(BK_STORE))db.createObjectStore(BK_STORE,{keyPath:'id',autoIncrement:true});
+    };
     r.onsuccess=()=>{_db=r.result;res(_db);};
     r.onerror=()=>rej(r.error);
   });
@@ -2670,9 +2770,242 @@ async function handlePhotoUpload(input){
   toast('📸 Shranjena','ok');
 }
 
+// === TEDENSKI BACKUP REMINDER ===
+function getDaysSinceLastBackup(){
+  const last=localStorage.getItem('wt_last_backup');
+  if(!last)return null;
+  return Math.floor((Date.now()-new Date(last).getTime())/86400000);
+}
+
+// === IDB BACKUP STORAGE — preživi reinstall PWA, hrani zadnjih 4 backupov ===
+async function saveBackupToIDB(blob,label){
+  const db=await openPhotoDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(BK_STORE,'readwrite');
+    const obj={date:new Date().toISOString(),label:label||'auto',blob:blob,sizeKB:Math.round(blob.length/1024)};
+    tx.objectStore(BK_STORE).add(obj);
+    tx.oncomplete=async()=>{
+      // Cleanup — drži samo zadnjih 4
+      await pruneOldBackups(4);
+      res();
+    };
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+
+async function getAllBackups(){
+  const db=await openPhotoDB();
+  return new Promise(res=>{
+    const tx=db.transaction(BK_STORE,'readonly');
+    const r=tx.objectStore(BK_STORE).getAll();
+    r.onsuccess=()=>res(r.result.sort((a,b)=>b.date.localeCompare(a.date)));
+    r.onerror=()=>res([]);
+  });
+}
+
+async function deleteBackup(id){
+  const db=await openPhotoDB();
+  return new Promise(res=>{
+    const tx=db.transaction(BK_STORE,'readwrite');
+    tx.objectStore(BK_STORE).delete(id);
+    tx.oncomplete=res;
+  });
+}
+
+async function pruneOldBackups(keep){
+  const all=await getAllBackups();
+  if(all.length<=keep)return;
+  // Briši najstarejše (all je sortiran desc)
+  for(let i=keep;i<all.length;i++){
+    await deleteBackup(all[i].id);
+  }
+}
+
+// Ustvari backup JSON brez photos (za IDB — fotke so že v IDB)
+async function buildBackupJSON(includePhotos){
+  let photos=[];
+  if(includePhotos){
+    try{photos=await getAllPhotos();}catch(e){}
+  }
+  return JSON.stringify({
+    version:2,
+    date:new Date().toISOString(),
+    sets:getSets(),
+    pr:getPRs(),
+    notes:getNotes(),
+    bw:getBW(),
+    cycle:getCyc(),
+    meas:getMeas(),
+    gym:getGym(),
+    sessions:getSessions(),
+    cynotes:getCyNotes(),
+    restplan:getRestPlan(),
+    setcounts:getSetCounts(),
+    bwgoal:getBWGoal(),
+    theme:localStorage.getItem(LS.theme)||'dark',
+    alarm:getAlarmSettings(),
+    bilateral:getBilatList(),
+    collars:getCollars(),
+    photos:photos,
+    swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
+    sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}')
+  });
+}
+
+// Auto-shrani backup v IDB (brez photos — varčuje prostor)
+async function autoBackupToIDB(){
+  try{
+    const json=await buildBackupJSON(false);
+    await saveBackupToIDB(json,'auto');
+    localStorage.setItem('wt_last_idb_backup',new Date().toISOString());
+    return true;
+  }catch(e){console.warn('IDB backup failed:',e);return false;}
+}
+
+function checkBackupReminder(){
+  const banner=document.getElementById('bk-banner');
+  const txt=document.getElementById('bk-banner-text');
+  if(!banner||!txt)return;
+  // Ne prikaži, če user "snooze-al" v zadnjih 24h
+  const snooze=localStorage.getItem('wt_backup_snooze');
+  if(snooze&&Date.now()-new Date(snooze).getTime()<86400000)return;
+  const days=getDaysSinceLastBackup();
+  const sess=getSessions();
+  // Še nikoli ni delal manualnega backupa — opozori po 3 sesijah
+  if(days===null){
+    if(sess.length>=3){
+      txt.innerHTML=`<strong>Naredi prvi backup</strong>${sess.length} sesij brez backupa. Eno tap-no je dovolj.`;
+      banner.classList.add('show');banner.classList.remove('urgent');
+    }
+    return;
+  }
+  // 7+ dni od zadnjega = opozori + tudi avto-shrani v IDB v ozadju
+  if(days>=14){
+    txt.innerHTML=`<strong>Backup star ${days} dni</strong>Naredi novega zdaj — že 2 tedna brez.`;
+    banner.classList.add('show','urgent');
+    autoBackupToIDB();  // tiho v IDB
+  } else if(days>=7){
+    txt.innerHTML=`<strong>Tedenski backup</strong>${days} dni od zadnjega. Tap-ni za nov.`;
+    banner.classList.add('show');banner.classList.remove('urgent');
+    autoBackupToIDB();
+  }
+}
+
+async function doWeeklyBackup(){
+  // 1) Avto-shrani v IDB (brez fotk — varčuje prostor)
+  await autoBackupToIDB();
+  // 2) Sproži download datoteke (z fotkami)
+  await exportData();
+  const banner=document.getElementById('bk-banner');
+  if(banner)banner.classList.remove('show','urgent');
+  setTimeout(()=>{
+    toast('💾 Shrani v Drive ali iCloud!','ok');
+  },800);
+}
+
+function snoozeBackup(){
+  localStorage.setItem('wt_backup_snooze',new Date().toISOString());
+  const banner=document.getElementById('bk-banner');
+  if(banner)banner.classList.remove('show','urgent');
+  toast('Spomnil te bom jutri','ok');
+}
+
+// === UI ZA TOOLS — UPRAVLJANJE BACKUPOV ===
+async function renderBackupList(){
+  const el=document.getElementById('backup-list');
+  if(!el)return;
+  const list=await getAllBackups();
+  if(list.length===0){
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;">Ni shranjenih avto-backupov.</div>';
+    return;
+  }
+  el.innerHTML=list.map(b=>{
+    const d=new Date(b.date);
+    const dateStr=d.toLocaleDateString('sl-SI')+' '+d.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
+    const days=Math.floor((Date.now()-d.getTime())/86400000);
+    const ago=days===0?'danes':days===1?'včeraj':`pred ${days} dnevi`;
+    return `<div class="bk-item">
+      <div class="bk-item-l">
+        <div class="bk-item-date">${dateStr}</div>
+        <div class="bk-item-meta">${ago} · ${b.sizeKB||'?'}KB · ${b.label}</div>
+      </div>
+      <div class="bk-item-r">
+        <button class="bk-item-btn" onclick="downloadBackupFromIDB(${b.id})">⬇</button>
+        <button class="bk-item-btn" onclick="restoreBackupFromIDB(${b.id})">↺</button>
+        <button class="bk-item-btn del" onclick="delBackupConfirm(${b.id})">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function downloadBackupFromIDB(id){
+  const list=await getAllBackups();
+  const b=list.find(x=>x.id===id);if(!b)return;
+  const blob=new Blob([b.blob],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`workout_backup_${b.date.split('T')[0]}.json`;
+  a.click();URL.revokeObjectURL(url);
+  toast('💾 Backup prenesen','ok');
+}
+
+async function restoreBackupFromIDB(id){
+  if(!confirm('⚠️ Trenutni podatki bodo prepisani s tem backupom. Nadaljujem?'))return;
+  const list=await getAllBackups();
+  const b=list.find(x=>x.id===id);if(!b)return;
+  try{
+    const backup=JSON.parse(b.blob);
+    // Restore vse podatke (kot v importData ampak brez izbire datoteke)
+    if(backup.sets) lss(LS.sets,backup.sets);
+    if(backup.pr) lss(LS.pr,backup.pr);
+    if(backup.notes) lss(LS.notes,backup.notes);
+    if(backup.bw) lss(LS.bw,backup.bw);
+    if(backup.cycle) lss(LS.cycle,backup.cycle);
+    if(backup.meas) lss(LS.meas,backup.meas);
+    if(backup.gym) lss(LS.gym,backup.gym);
+    if(backup.sessions) lss(LS.sessions,backup.sessions);
+    if(backup.cynotes) lss(LS.cynotes,backup.cynotes);
+    if(backup.restplan) lss(LS.restplan,backup.restplan);
+    if(backup.setcounts) lss(LS.setcounts,backup.setcounts);
+    if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
+    if(backup.theme) lss(LS.theme,backup.theme);
+    if(backup.alarm) saveAlarmSettings(backup.alarm);
+    if(backup.bilateral) localStorage.setItem(BILAT_KEY,JSON.stringify(backup.bilateral));
+    if(backup.collars!==undefined) setCollars(backup.collars);
+    if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
+    if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
+    initTheme();initBWGoal();
+    cw=0;cd=0;
+    document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
+    showPage('workout');showDay(0);
+    toast('✓ Obnovljeno iz backupa','ok');
+  }catch(e){alert('Napaka pri obnovi: '+e.message);}
+}
+
+async function delBackupConfirm(id){
+  if(!confirm('Izbriši ta backup?'))return;
+  await deleteBackup(id);
+  await renderBackupList();
+  toast('Izbrisan','ok');
+}
+
+async function manualAutoBackup(){
+  const ok=await autoBackupToIDB();
+  if(ok){
+    toast('💾 Backup shranjen v napravi','ok');
+    await renderBackupList();
+  }else{
+    toast('Napaka','err');
+  }
+}
+
 initTheme();initBWGoal();showDay(0);
-// Obnovi morebiten aktivni session in rest timer (po crash/zaprtju)
+// Obnovi morebiten aktivni session in rest timer
 restoreSession();restoreTimer();
+
+// Tedenski backup reminder ob startu
+setTimeout(checkBackupReminder,2000);
 </script>
 </body>
 </html>
