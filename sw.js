@@ -1,6 +1,6 @@
 // Workout Tracker — Service Worker
 // Verzija — povečaj ko spremeniš katerokoli datoteko, da se cache osveži
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.2.0';
 const CACHE_NAME = `workout-tracker-${VERSION}`;
 
 // Datoteke ki naj se cachirajo za offline delovanje
