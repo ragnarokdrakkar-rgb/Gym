@@ -3289,48 +3289,51 @@ function checkBackupReminder(){
   const banner=document.getElementById('bk-banner');
   const txt=document.getElementById('bk-banner-text');
   if(!banner||!txt)return;
-  // Ne prikaži, če user "snooze-al" v zadnjih 24h
-  const snooze=localStorage.getItem('wt_backup_snooze');
-  if(snooze&&Date.now()-new Date(snooze).getTime()<86400000)return;
   const days=getDaysSinceLastBackup();
   const sess=getSessions();
-  // Še nikoli ni delal manualnega backupa — opozori po 3 sesijah
+  // Še nikoli ni delal backupa — opozori po 3 sesijah
   if(days===null){
     if(sess.length>=3){
-      txt.innerHTML=`<strong>Naredi prvi backup</strong>${sess.length} sesij brez backupa. Eno tap-no je dovolj.`;
-      banner.classList.add('show');banner.classList.remove('urgent');
+      txt.innerHTML=`<strong>Naredi prvi backup zdaj</strong>${sess.length} sesij brez backupa.`;
+      banner.classList.add('show','urgent');
     }
     return;
   }
-  // 7+ dni od zadnjega = opozori + tudi avto-shrani v IDB v ozadju
-  if(days>=14){
-    txt.innerHTML=`<strong>Backup star ${days} dni</strong>Naredi novega zdaj — že 2 tedna brez.`;
-    banner.classList.add('show','urgent');
-    autoBackupToIDB();  // tiho v IDB
-  } else if(days>=7){
-    txt.innerHTML=`<strong>Tedenski backup</strong>${days} dni od zadnjega. Tap-ni za nov.`;
-    banner.classList.add('show');banner.classList.remove('urgent');
-    autoBackupToIDB();
+  // 7+ dni — AVTO-PRENESI v Downloads + opozori
+  if(days>=7){
+    // Avto-trigger download (ne čaka tap-a)
+    if(!localStorage.getItem('wt_autodl_'+new Date().toISOString().split('T')[0])){
+      // Markiraj, da smo danes že naredili avto-download (ne spam)
+      localStorage.setItem('wt_autodl_'+new Date().toISOString().split('T')[0],'1');
+      // Počisti stare markerje (drži samo zadnjega)
+      Object.keys(localStorage).forEach(k=>{
+        if(k.startsWith('wt_autodl_')&&k!=='wt_autodl_'+new Date().toISOString().split('T')[0]){
+          localStorage.removeItem(k);
+        }
+      });
+      // Sproži prenos
+      exportData();
+      txt.innerHTML=`<strong>📥 Backup prenesen</strong>${days} dni od zadnjega — preveri Downloads mapo.`;
+      banner.classList.add('show');
+    } else if(days>=14){
+      txt.innerHTML=`<strong>Backup star ${days} dni!</strong>Tapni za nov.`;
+      banner.classList.add('show','urgent');
+    } else {
+      txt.innerHTML=`<strong>Tedenski backup</strong>${days} dni od zadnjega.`;
+      banner.classList.add('show');
+    }
   }
 }
 
 async function doWeeklyBackup(){
-  // 1) Avto-shrani v IDB (brez fotk — varčuje prostor)
-  await autoBackupToIDB();
-  // 2) Sproži download datoteke (z fotkami)
   await exportData();
   const banner=document.getElementById('bk-banner');
   if(banner)banner.classList.remove('show','urgent');
-  setTimeout(()=>{
-    toast('💾 Shrani v Drive ali iCloud!','ok');
-  },800);
 }
 
 function snoozeBackup(){
-  localStorage.setItem('wt_backup_snooze',new Date().toISOString());
   const banner=document.getElementById('bk-banner');
   if(banner)banner.classList.remove('show','urgent');
-  toast('Spomnil te bom jutri','ok');
 }
 
 // === UI ZA TOOLS — UPRAVLJANJE BACKUPOV ===
