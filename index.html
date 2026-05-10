@@ -41,7 +41,7 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .topbtns{display:flex;gap:6px;flex-wrap:wrap;}
 .icon-btn{font-size:11px;padding:5px 10px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
 .icon-btn:hover{background:var(--bg4);}
-.nav{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:1.5rem;}
+.nav{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:1.5rem;}
 .nt{padding:8px 2px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:10px;color:var(--text2);font-weight:500;line-height:1.3;}
 .nt.active{border:.5px solid var(--green);background:var(--green-bg);color:var(--green-text);}
 .page{display:none;}.page.active{display:block;}
@@ -198,7 +198,7 @@ select.si option{background:var(--bg3);color:var(--text);}
 .lift-chip{font-size:11px;padding:3px 10px;border-radius:20px;cursor:pointer;border:.5px solid var(--border2);background:var(--bg3);color:var(--text2);}
 .lift-chip.on{border-color:var(--purple);background:var(--purple-bg);color:var(--purple-text);}
 /* Summary cards */
-.sum-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1rem;}
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem;}
 .sum-card{background:var(--bg3);border-radius:10px;padding:12px 14px;}
 .sum-val{font-size:22px;font-weight:500;color:var(--text);}
 .sum-lbl{font-size:11px;color:var(--text3);margin-top:2px;}
@@ -233,6 +233,12 @@ select.si option{background:var(--bg3);color:var(--text);}
 .pl-mini{font-size:9px;color:var(--text3);margin-top:2px;line-height:1.2;text-align:center;letter-spacing:.02em;}
 .pl-mini.ok{color:var(--green-text);}
 .pl-mini.bad{color:var(--red-text);}
+
+/* Stepper gumbi za kg in pon */
+.stp-wrap{display:flex;align-items:center;gap:2px;}
+.stp-btn{flex-shrink:0;width:24px;height:30px;border-radius:5px;border:.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
+.stp-btn:active{background:var(--bg4);transform:scale(.95);}
+.stp-wrap input{flex:1;min-width:0;text-align:center;padding-left:2px!important;padding-right:2px!important;}
 /* Timer end alert flash */
 @keyframes flashAlert{
   0%,100%{background:var(--green-bg);border-color:var(--green);}
@@ -407,7 +413,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <div class="nt" onclick="showPage('cycle')">Cikli</div>
   <div class="nt" onclick="showPage('gymlog')">Gym log</div>
   <div class="nt" onclick="showPage('bodyweight')">Teža</div>
-  <div class="nt" onclick="showPage('body')">Mere</div>
   <div class="nt" onclick="showPage('stats')">Stats</div>
   <div class="nt" onclick="showPage('tools')">Tools</div>
 </div>
@@ -502,6 +507,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <!-- Session history -->
   <div class="card">
     <div class="ct">Session zgodovina</div>
+    <button class="sb" onclick="addManualSession()" style="margin-bottom:.5rem;background:var(--bg3);">+ Ročno dodaj sesijo</button>
     <div id="sess-hist-content"><div style="font-size:12px;color:var(--text3);">Še ni zabeleženih treningov.</div></div>
   </div>
 </div>
@@ -559,14 +565,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div class="ct">🏆 PR feed</div>
     <div id="pr-feed"></div>
   </div>
-  <div class="card">
-    <div class="ct">📸 Progress fotografije</div>
-    <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
-      <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoUpload(this)">
-      <button class="sb" onclick="document.getElementById('photo-input').click()">+ Dodaj fotografijo</button>
-    </div>
-    <div class="photo-grid" id="photo-grid"></div>
-  </div>
 </div>
 
 <!-- NOTE POPUP -->
@@ -599,6 +597,56 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni avto-backupi (zadnjih 4):</div>
     <div id="backup-list"></div>
+  </div>
+  <div class="card">
+    <div class="ct">➕ Dodaj svojo vajo</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;line-height:1.4;">Vaje se shranijo trajno in pojavijo med "Zamenjave" pri vsaki vaji.</div>
+    <div class="ir"><span class="lbl">Ime vaje</span><input class="si" type="text" id="cust-name" placeholder="npr. Cable crossover"></div>
+    <div class="ir"><span class="lbl">Mišična skupina</span>
+      <select class="si" id="cust-muscle">
+        <option value="Prsa">Prsa</option>
+        <option value="Hrbet">Hrbet</option>
+        <option value="Ramena">Ramena</option>
+        <option value="Bicepsi">Bicepsi</option>
+        <option value="Tricepsi">Tricepsi</option>
+        <option value="Kvadricepsi">Kvadricepsi</option>
+        <option value="Hamstringi">Hamstringi</option>
+        <option value="Gluteusi">Gluteusi</option>
+        <option value="Zadnji deltoid">Zadnji deltoid</option>
+        <option value="Mečni">Mečni</option>
+      </select>
+    </div>
+    <div class="ir"><span class="lbl">Tip</span>
+      <select class="si" id="cust-cat">
+        <option value="compound">Compound (več mišic)</option>
+        <option value="isolation">Izolacija</option>
+      </select>
+    </div>
+    <div class="sl" style="margin-top:.5rem;">Opis izvedbe</div>
+    <textarea class="na" id="cust-desc" placeholder="npr. Stoj pokončno, primi ročaja, povleci k središču..." style="min-height:60px;"></textarea>
+    <button class="sb" onclick="addCustomExercise()" style="margin-top:.5rem;">+ Shrani vajo</button>
+    <div class="sl" style="margin-top:.75rem;">Shranjene vaje:</div>
+    <div id="custom-ex-list"></div>
+  </div>
+  <div class="card">
+    <div class="ct">⚙️ Nastavitve gumbov +/-</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Določa za koliko se spremeni vrednost ob tap +/-</div>
+    <div class="ir"><span class="lbl">Korak teže (kg)</span>
+      <select class="si" id="kg-step-sel" onchange="setKgStep(this.value);showDay(cd);">
+        <option value="0.5">0.5 kg</option>
+        <option value="1">1 kg</option>
+        <option value="1.25">1.25 kg</option>
+        <option value="2.5">2.5 kg</option>
+        <option value="5">5 kg</option>
+      </select>
+    </div>
+    <div class="ir"><span class="lbl">Korak ponovitev</span>
+      <select class="si" id="reps-step-sel" onchange="setRepsStep(this.value);showDay(cd);">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="5">5</option>
+      </select>
+    </div>
   </div>
   <div class="card">
     <div class="ct">Nastavitve alarma</div>
@@ -905,19 +953,18 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.nt').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const idx={workout:0,cycle:1,gymlog:2,bodyweight:3,body:4,stats:5,tools:6}[p];
+  const idx={workout:0,cycle:1,gymlog:2,bodyweight:3,stats:4,tools:5}[p];
   document.querySelectorAll('.nt')[idx].classList.add('active');
   if(p==='bodyweight'){initBWGoal();renderBW();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();}
+  if(p==='tools'){initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
   if(p==='gymlog'){renderSessHist();renderRestPlan();renderWeeklySummary();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
     document.getElementById('body-readiness').innerHTML=renderBodyReadiness();
     document.getElementById('pr-feed').innerHTML=renderPRFeed();
-    renderPhotos();
   }
 }
 
@@ -1073,10 +1120,11 @@ const BIG_LIFTS = {
   ohp:"Overhead press — barbell"
 };
 
-function setWeek(w){cw=w;document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===w));showDay(cd);}
+function setWeek(w){cw=w;localStorage.setItem('wt_last_week',String(w));document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===w));showDay(cd);}
 
 function showDay(idx){
   cd=idx;
+  localStorage.setItem('wt_last_day',String(idx));
   document.querySelectorAll('.dt').forEach((t,i)=>t.classList.toggle('active',i===idx));
   const d=PROG.days[idx],wk=PROG.weeks[cw],cyc=getCyc();
   const done=d.ex.filter((_,i)=>allDone(idx,i)).length;
@@ -1086,7 +1134,6 @@ function showDay(idx){
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${d.ex.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
   html+=d.ex.map((e,i)=>renderEx(e,i,idx,wk,cyc.num)).join('');
-  html+=`<div class="sl" style="margin-top:.5rem;">Opombe</div><textarea class="na" placeholder="Energija, bolečine, PR-ji..." oninput="saveNote('${nk}',this.value)">${nv}</textarea>`;
   document.getElementById('day-content').innerHTML=html;
 }
 
@@ -1139,10 +1186,11 @@ function renderEx(e,ei,di,wk,cn){
     const pls=isBarbell?platesShort(kgVal):{text:'',cls:''};
     const plMini=isBarbell?`<div class="pl-mini ${pls.cls}" id="pl-${exKey}-${si}">${pls.text}</div>`:'';
     const dropMark=isDrop?'<span class="set-type drop">D</span>':'';
-    // Note icon
-    const noteIcon=`<span class="note-icon${s.note?' has':''}" onclick="openNote('${exKey}',${si},${di},${ei},${cn})" title="Opomba">${s.note?'📝':'＋'}</span>`;
-    const kgInputHtml=`<input class="wi" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" min="0" step="2.5" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})">`;
-    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td><input class="ri" type="number" inputmode="numeric" placeholder="pon" value="${s.reps}" min="0" step="1" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)"></td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td style="white-space:nowrap;"><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button>${noteIcon}</td></tr>`;
+    const kgStep=getKgStep();
+    const repsStep=getRepsStep();
+    const kgInputHtml=`<div class="stp-wrap"><button class="stp-btn" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},-${kgStep},${isBarbell?1:0})">−</button><input class="wi" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" min="0" step="${kgStep}" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})"><button class="stp-btn" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},${kgStep},${isBarbell?1:0})">+</button></div>`;
+    const repsInputHtml=`<div class="stp-wrap"><button class="stp-btn" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},-${repsStep})">−</button><input class="ri" type="number" inputmode="numeric" placeholder="pon" value="${s.reps}" min="0" step="${repsStep}" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)"><button class="stp-btn" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},${repsStep})">+</button></div>`;
+    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td>${repsInputHtml}</td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button></td></tr>`;
   }).join('');
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
@@ -1163,11 +1211,12 @@ function renderEx(e,ei,di,wk,cn){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${swHasData?`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`:''}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button><button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>${getExSwaps()[exKey]?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
-      ${swHasData?swHasData.map(s=>`<div class="sw-item" onclick="useSwap('${exKey}','${s.n.replace(/'/g,"\\'")}')"><div class="sw-item-name">${s.n}</div><div class="sw-item-note">${s.note}</div></div>`).join(''):''}
+      <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}',this.value)" style="width:100%;margin-bottom:8px;">
+      <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,'')}</div>
       <div class="sw-custom-row">
-        <input class="sw-custom-in" type="text" placeholder="Vpiši svojo zamenjavo..." id="swci-${exKey}">
+        <input class="sw-custom-in" type="text" placeholder="Ali vpiši svojo..." id="swci-${exKey}">
         <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}')">Uporabi</button>
       </div>
     </div>
@@ -1232,6 +1281,188 @@ function toggleSwap(key){const p=document.getElementById('sw-'+key);if(p){swOpen
 function getExSwaps(){try{return JSON.parse(localStorage.getItem('wt_exswap')||'{}');}catch{return {};}}
 function saveExSwaps(s){localStorage.setItem('wt_exswap',JSON.stringify(s));}
 function getSwappedName(exKey,origName){const s=getExSwaps();return s[exKey]||origName;}
+
+// === STEPPER za kg in pon ===
+function getKgStep(){return parseFloat(localStorage.getItem('wt_kg_step')||'2.5');}
+function getRepsStep(){return parseInt(localStorage.getItem('wt_reps_step')||'1');}
+function setKgStep(v){localStorage.setItem('wt_kg_step',String(parseFloat(v)||2.5));toast('💾 Shranjeno','ok');}
+function setRepsStep(v){localStorage.setItem('wt_reps_step',String(parseInt(v)||1));toast('💾 Shranjeno','ok');}
+
+// === BUILT-IN EXERCISE DATABASE (100 vaj) ===
+// Polja: n=ime, m=primary muscle, s=secondary, c=compound/isolation, eq=equipment, d=opis
+const EXERCISE_DB=[
+  // ========== CHEST (12) ==========
+  {n:"Barbell Bench Press",m:"Chest",s:"Triceps, Front Delt",c:"compound",eq:"barbell",d:"Lie flat, grip slightly wider than shoulders. Lower bar to mid-chest, press up explosively. Keep shoulder blades retracted."},
+  {n:"Incline Barbell Press",m:"Chest",s:"Front Delt, Triceps",c:"compound",eq:"barbell",d:"Bench at 30-45°. Lower to upper chest, drive feet into floor. Targets upper chest."},
+  {n:"Decline Barbell Press",m:"Chest",s:"Triceps",c:"compound",eq:"barbell",d:"Bench at -15-30°. Lower to lower chest. Targets lower pec fibers."},
+  {n:"Dumbbell Bench Press",m:"Chest",s:"Triceps, Front Delt",c:"compound",eq:"dumbbell",d:"Allows greater range of motion than barbell. Press dumbbells together at top for peak contraction."},
+  {n:"Incline Dumbbell Press",m:"Chest",s:"Front Delt, Triceps",c:"compound",eq:"dumbbell",d:"Incline 30-45°. Better stretch on upper chest than barbell version."},
+  {n:"Dumbbell Fly",m:"Chest",s:"",c:"isolation",eq:"dumbbell",d:"Slight elbow bend, arc dumbbells out and down. Squeeze chest at top. Don't go too low — protect shoulders."},
+  {n:"Cable Crossover",m:"Chest",s:"",c:"isolation",eq:"cable",d:"Stand between cables, slight forward lean. Pull handles down and across. Continuous tension throughout."},
+  {n:"Cable Chest Fly",m:"Chest",s:"",c:"isolation",eq:"cable",d:"Adjust cables to chest height. Sweep handles together in arc. Full stretch at start, full squeeze at end."},
+  {n:"Pec Deck Machine",m:"Chest",s:"",c:"isolation",eq:"machine",d:"Sit upright, elbows on pads. Bring arms together, squeeze chest. Great for finishing pump."},
+  {n:"Push-Ups",m:"Chest",s:"Triceps, Core",c:"compound",eq:"bodyweight",d:"Hands shoulder-width, body straight from head to heels. Lower chest to floor, press up."},
+  {n:"Weighted Dips",m:"Chest",s:"Triceps, Front Delt",c:"compound",eq:"bodyweight",d:"Lean forward for chest emphasis. Lower until shoulders below elbows. Add weight via belt."},
+  {n:"Machine Chest Press",m:"Chest",s:"Triceps, Front Delt",c:"compound",eq:"machine",d:"Adjust seat so handles align with mid-chest. Safer for beginners or heavy work without spotter."},
+
+  // ========== BACK (15) ==========
+  {n:"Conventional Deadlift",m:"Back",s:"Hamstrings, Glutes, Traps",c:"compound",eq:"barbell",d:"Bar over mid-foot. Hinge at hips, neutral spine. Drive through heels, lock out at top. King of strength."},
+  {n:"Sumo Deadlift",m:"Back",s:"Glutes, Quads, Adductors",c:"compound",eq:"barbell",d:"Wide stance, toes out. Shorter ROM, more hip drive. Better for tall lifters or hip mobility issues."},
+  {n:"Romanian Deadlift",m:"Hamstrings",s:"Glutes, Back",c:"compound",eq:"barbell",d:"Slight knee bend, push hips back. Bar slides down legs. Stop when stretch in hams. Don't go to floor."},
+  {n:"Pull-Ups",m:"Back",s:"Biceps",c:"compound",eq:"bodyweight",d:"Hang from bar, palms forward. Pull until chin over bar. Engage lats by pulling elbows down."},
+  {n:"Chin-Ups",m:"Back",s:"Biceps",c:"compound",eq:"bodyweight",d:"Underhand grip, palms toward you. More biceps involvement than pull-ups. Easier for most."},
+  {n:"Lat Pulldown",m:"Back",s:"Biceps",c:"compound",eq:"cable",d:"Wide grip, slight backward lean. Pull bar to upper chest. Don't lean back excessively."},
+  {n:"Close-Grip Lat Pulldown",m:"Back",s:"Biceps",c:"compound",eq:"cable",d:"V-handle or close neutral grip. More biceps and lower lat activation."},
+  {n:"Barbell Row",m:"Back",s:"Biceps, Rear Delt",c:"compound",eq:"barbell",d:"Hinge ~45°, row bar to lower chest. Keep back flat. Drive elbows up and back."},
+  {n:"Pendlay Row",m:"Back",s:"Biceps, Rear Delt",c:"compound",eq:"barbell",d:"Bar starts on floor every rep. Strict, explosive pull. Less momentum than barbell row."},
+  {n:"T-Bar Row",m:"Back",s:"Biceps, Rear Delt",c:"compound",eq:"barbell",d:"Anchor one end, load other. Chest supported version safer for lower back."},
+  {n:"Dumbbell Row",m:"Back",s:"Biceps",c:"compound",eq:"dumbbell",d:"Knee and hand on bench, opposite arm rows. Pull dumbbell toward hip, squeeze back."},
+  {n:"Single-Arm DB Row",m:"Back",s:"Biceps",c:"compound",eq:"dumbbell",d:"Same as DB row but emphasize unilateral work. Great for fixing imbalances."},
+  {n:"Seated Cable Row",m:"Back",s:"Biceps",c:"compound",eq:"cable",d:"Sit upright, V-handle. Pull to lower abs, squeeze shoulder blades. Don't rock back."},
+  {n:"Face Pulls",m:"Rear Delt",s:"Back, Traps",c:"isolation",eq:"cable",d:"Rope at face height. Pull to face, externally rotate at end. Crucial for shoulder health."},
+  {n:"Shrugs",m:"Traps",s:"",c:"isolation",eq:"dumbbell",d:"Heavy weight, shrug straight up. Hold at top 1 sec. No rolling — straight up and down."},
+
+  // ========== SHOULDERS (10) ==========
+  {n:"Overhead Press (OHP)",m:"Shoulders",s:"Triceps, Upper Chest",c:"compound",eq:"barbell",d:"Stand tall, bar at shoulders. Press overhead, lock out. Squeeze glutes to protect lower back."},
+  {n:"Push Press",m:"Shoulders",s:"Triceps, Legs",c:"compound",eq:"barbell",d:"Use slight leg drive to assist press. Allows heavier weight than strict press."},
+  {n:"Seated DB Shoulder Press",m:"Shoulders",s:"Triceps",c:"compound",eq:"dumbbell",d:"Back support reduces lower back stress. Press dumbbells from shoulder to overhead."},
+  {n:"Arnold Press",m:"Shoulders",s:"Triceps",c:"compound",eq:"dumbbell",d:"Start palms facing you, rotate to facing forward as you press. Hits all three delt heads."},
+  {n:"Lateral Raises",m:"Shoulders",s:"",c:"isolation",eq:"dumbbell",d:"Slight bend at elbow. Raise to shoulder height. Lead with elbows, not hands. Light weight, strict form."},
+  {n:"Cable Lateral Raise",m:"Shoulders",s:"",c:"isolation",eq:"cable",d:"Cable from low pulley, behind body. Raise out to side. Constant tension throughout."},
+  {n:"Front Raises",m:"Front Delt",s:"",c:"isolation",eq:"dumbbell",d:"Raise weight in front to shoulder height. Often unnecessary — bench press already hits front delts."},
+  {n:"Rear Delt Fly",m:"Rear Delt",s:"",c:"isolation",eq:"dumbbell",d:"Bent over or face-down on incline. Raise dumbbells out wide. Lead with pinkies, not thumbs."},
+  {n:"Reverse Pec Deck",m:"Rear Delt",s:"",c:"isolation",eq:"machine",d:"Reverse position on pec deck. Open arms wide, squeeze rear delts. Easier form than fly."},
+  {n:"Upright Row",m:"Shoulders",s:"Traps, Biceps",c:"compound",eq:"barbell",d:"Pull bar up to chest, elbows high. Wider grip safer for shoulders. Stop at chest height."},
+
+  // ========== BICEPS (8) ==========
+  {n:"Barbell Curl",m:"Biceps",s:"",c:"isolation",eq:"barbell",d:"Stand, shoulder-width grip. Curl to chest, full ROM. No swinging — strict reps."},
+  {n:"EZ-Bar Curl",m:"Biceps",s:"",c:"isolation",eq:"barbell",d:"Easier on wrists than straight bar. Inner grip = outer biceps, outer grip = inner."},
+  {n:"Dumbbell Curl",m:"Biceps",s:"",c:"isolation",eq:"dumbbell",d:"Alternating or both at once. Supinate (rotate palm up) for max biceps activation."},
+  {n:"Hammer Curl",m:"Biceps",s:"Brachialis, Forearm",c:"isolation",eq:"dumbbell",d:"Neutral grip (palms facing each other). Hits brachialis and brachioradialis. Builds arm thickness."},
+  {n:"Incline Dumbbell Curl",m:"Biceps",s:"",c:"isolation",eq:"dumbbell",d:"Bench at 45-60°. Greater stretch on long head of biceps. Strict form essential."},
+  {n:"Preacher Curl",m:"Biceps",s:"",c:"isolation",eq:"barbell",d:"Arms on pad. Isolates biceps with no swing. Don't lock out fully at bottom."},
+  {n:"Cable Curl",m:"Biceps",s:"",c:"isolation",eq:"cable",d:"Constant tension throughout ROM. Try rope, straight bar, or single-handle variations."},
+  {n:"Concentration Curl",m:"Biceps",s:"",c:"isolation",eq:"dumbbell",d:"Seated, elbow on inner thigh. Slow, strict reps. Peak biceps contraction."},
+
+  // ========== TRICEPS (8) ==========
+  {n:"Close-Grip Bench Press",m:"Triceps",s:"Chest, Front Delt",c:"compound",eq:"barbell",d:"Hands shoulder-width or slightly closer. Tucked elbows. Best mass-builder for triceps."},
+  {n:"Tricep Pushdown (Rope)",m:"Triceps",s:"",c:"isolation",eq:"cable",d:"Rope on high pulley. Push down, spread rope at bottom. Keep elbows tucked."},
+  {n:"Tricep Pushdown (Bar)",m:"Triceps",s:"",c:"isolation",eq:"cable",d:"Straight or V-bar. Push down to full extension. Don't flare elbows."},
+  {n:"Skull Crushers",m:"Triceps",s:"",c:"isolation",eq:"barbell",d:"Lying on bench, EZ bar overhead. Lower to forehead, extend up. Elbows pointed up."},
+  {n:"Overhead Tricep Extension",m:"Triceps",s:"",c:"isolation",eq:"dumbbell",d:"Stand or sit, dumbbell overhead with both hands. Lower behind head, extend up. Long head focus."},
+  {n:"Tricep Kickback",m:"Triceps",s:"",c:"isolation",eq:"dumbbell",d:"Hinge over, upper arm parallel to floor. Extend forearm back. Squeeze at top."},
+  {n:"Diamond Push-Ups",m:"Triceps",s:"Chest",c:"compound",eq:"bodyweight",d:"Hands form diamond under chest. More triceps than wide push-ups. Hard for most."},
+  {n:"Dips (Vertical Body)",m:"Triceps",s:"Chest, Front Delt",c:"compound",eq:"bodyweight",d:"Body upright (not leaning). Lower until 90° at elbow. Press back up. Add weight when easy."},
+
+  // ========== QUADS (8) ==========
+  {n:"Barbell Back Squat",m:"Quads",s:"Glutes, Hamstrings, Core",c:"compound",eq:"barbell",d:"Bar on traps, feet shoulder-width. Sit back and down, knees track over toes. Drive up through heels."},
+  {n:"Front Squat",m:"Quads",s:"Glutes, Core",c:"compound",eq:"barbell",d:"Bar on front delts. More upright torso, more quad-dominant. Need shoulder/wrist mobility."},
+  {n:"Leg Press",m:"Quads",s:"Glutes, Hamstrings",c:"compound",eq:"machine",d:"Feet shoulder-width on platform. Lower until knees ~90°. Don't lock out fully at top."},
+  {n:"Bulgarian Split Squat",m:"Quads",s:"Glutes",c:"compound",eq:"dumbbell",d:"Rear foot elevated on bench. Lower into lunge. Front leg does most of work. Brutal but effective."},
+  {n:"Walking Lunges",m:"Quads",s:"Glutes, Hamstrings",c:"compound",eq:"dumbbell",d:"Step forward, lower back knee toward floor. Step through. Continuous walking motion."},
+  {n:"Goblet Squat",m:"Quads",s:"Glutes, Core",c:"compound",eq:"dumbbell",d:"Hold dumbbell at chest. Squat deep. Great for learning squat pattern."},
+  {n:"Leg Extension",m:"Quads",s:"",c:"isolation",eq:"machine",d:"Sit on machine, pad on shins. Extend legs fully. Squeeze quads at top."},
+  {n:"Hack Squat",m:"Quads",s:"Glutes",c:"compound",eq:"machine",d:"Back against pad. More quad-isolated than back squat. Easier on lower back."},
+
+  // ========== HAMSTRINGS / GLUTES (8) ==========
+  {n:"Stiff-Leg Deadlift",m:"Hamstrings",s:"Glutes, Back",c:"compound",eq:"barbell",d:"Minimal knee bend. Hinge at hips. More hamstring stretch than RDL."},
+  {n:"Seated Leg Curl",m:"Hamstrings",s:"",c:"isolation",eq:"machine",d:"Pad above ankles. Curl heels under. Squeeze hamstrings at bottom."},
+  {n:"Lying Leg Curl",m:"Hamstrings",s:"",c:"isolation",eq:"machine",d:"Face down. Curl heels to glutes. Hips stay on pad — don't raise."},
+  {n:"Hip Thrust",m:"Glutes",s:"Hamstrings",c:"compound",eq:"barbell",d:"Upper back on bench, bar across hips. Drive hips up, squeeze glutes hard. Best glute builder."},
+  {n:"Glute Bridge",m:"Glutes",s:"Hamstrings",c:"compound",eq:"barbell",d:"On floor, bar across hips. Drive up, squeeze. Easier setup than hip thrust."},
+  {n:"Cable Pull-Through",m:"Glutes",s:"Hamstrings",c:"compound",eq:"cable",d:"Cable between legs from low pulley. Hinge forward, drive hips through. Great teaching tool for hinge pattern."},
+  {n:"Good Morning",m:"Hamstrings",s:"Glutes, Lower Back",c:"compound",eq:"barbell",d:"Bar on traps. Hinge forward keeping back flat. Excellent for posterior chain."},
+  {n:"Single-Leg Romanian DL",m:"Hamstrings",s:"Glutes, Core",c:"compound",eq:"dumbbell",d:"One foot off ground. Hinge with stance leg. Improves balance and unilateral strength."},
+
+  // ========== CALVES (3) ==========
+  {n:"Standing Calf Raise",m:"Calves",s:"",c:"isolation",eq:"machine",d:"Stand on platform, weight on shoulders. Rise up on toes, full ROM. Hold contraction 1 sec."},
+  {n:"Seated Calf Raise",m:"Calves",s:"",c:"isolation",eq:"machine",d:"Hits soleus more than gastrocnemius. Higher reps work better."},
+  {n:"Donkey Calf Raise",m:"Calves",s:"",c:"isolation",eq:"machine",d:"Bent-over position, weight on hips/lower back. Greater stretch on calves."},
+
+  // ========== CORE (10) ==========
+  {n:"Plank",m:"Core",s:"Shoulders, Glutes",c:"isolation",eq:"bodyweight",d:"Forearms on floor, body straight line. Squeeze glutes and core. Hold for time."},
+  {n:"Side Plank",m:"Core",s:"Glutes, Shoulders",c:"isolation",eq:"bodyweight",d:"Side position, body straight. Hold each side. Targets obliques."},
+  {n:"Hanging Leg Raise",m:"Core",s:"Hip Flexors",c:"isolation",eq:"bodyweight",d:"Hang from bar. Raise legs to 90° (or higher for advanced). Don't swing."},
+  {n:"Ab Wheel Rollout",m:"Core",s:"Shoulders",c:"isolation",eq:"other",d:"Knees on floor, roll wheel out. Keep core tight, don't sag. One of best ab exercises."},
+  {n:"Cable Crunch",m:"Core",s:"",c:"isolation",eq:"cable",d:"Kneel below cable, rope behind head. Crunch elbows toward knees. Don't pull with arms."},
+  {n:"Russian Twist",m:"Core",s:"",c:"isolation",eq:"dumbbell",d:"Sit, lean back, feet up. Twist torso side to side. Add weight when easy."},
+  {n:"Decline Sit-Up",m:"Core",s:"Hip Flexors",c:"isolation",eq:"bodyweight",d:"Decline bench. Add plate on chest for resistance. Full ROM crunch."},
+  {n:"Dead Bug",m:"Core",s:"",c:"isolation",eq:"bodyweight",d:"On back, arms up, knees bent. Lower opposite arm and leg. Keep back flat. Great for stability."},
+  {n:"Pallof Press",m:"Core",s:"",c:"isolation",eq:"cable",d:"Stand sideways to cable. Press handle out, resist rotation. Anti-rotation core work."},
+  {n:"Mountain Climbers",m:"Core",s:"Shoulders, Cardio",c:"compound",eq:"bodyweight",d:"Push-up position. Drive knees toward chest alternately. Fast pace = cardio. Slow = core."},
+
+  // ========== FOREARMS / GRIP (3) ==========
+  {n:"Wrist Curl",m:"Forearms",s:"",c:"isolation",eq:"dumbbell",d:"Forearms on bench, palms up. Curl wrists. Strict, slow reps."},
+  {n:"Reverse Wrist Curl",m:"Forearms",s:"",c:"isolation",eq:"dumbbell",d:"Palms down version. Hits extensors. Critical for balanced forearm development."},
+  {n:"Farmer's Walk",m:"Forearms",s:"Traps, Core",c:"compound",eq:"dumbbell",d:"Heavy dumbbells in each hand. Walk for distance or time. Builds grip and traps massively."},
+
+  // ========== FULL BODY / POWER (5) ==========
+  {n:"Power Clean",m:"Back",s:"Glutes, Hamstrings, Traps",c:"compound",eq:"barbell",d:"Explosive pull from floor to shoulders. Catch in front rack. Develops power and athleticism."},
+  {n:"Clean and Press",m:"Shoulders",s:"Back, Legs",c:"compound",eq:"barbell",d:"Power clean to shoulders, then overhead press. Full body movement."},
+  {n:"Snatch",m:"Back",s:"Shoulders, Legs, Glutes",c:"compound",eq:"barbell",d:"Floor to overhead in one motion. Most technical lift. Coach recommended."},
+  {n:"Kettlebell Swing",m:"Glutes",s:"Hamstrings, Back, Core",c:"compound",eq:"other",d:"Hinge, hike kettlebell back. Snap hips forward, kettlebell to chest height. Power from hips, not arms."},
+  {n:"Burpee",m:"Full Body",s:"Cardio",c:"compound",eq:"bodyweight",d:"Squat down, jump back to plank, push-up, jump forward, jump up. Brutal conditioning tool."}
+];
+
+// === CUSTOM EXERCISE DB ===
+const CUST_KEY='wt_custom_ex';
+function getCustomExercises(){try{return JSON.parse(localStorage.getItem(CUST_KEY)||'[]');}catch{return [];}}
+function saveCustomExercises(arr){localStorage.setItem(CUST_KEY,JSON.stringify(arr));}
+function addCustomExercise(){
+  const name=document.getElementById('cust-name').value.trim();
+  if(!name){toast('Vnesi ime','err');return;}
+  const muscle=document.getElementById('cust-muscle').value;
+  const cat=document.getElementById('cust-cat').value;
+  const desc=document.getElementById('cust-desc').value.trim();
+  const list=getCustomExercises();
+  if(list.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Vaja že obstaja','err');return;}
+  list.push({n:name,muscle,cat,desc,created:new Date().toISOString()});
+  saveCustomExercises(list);
+  document.getElementById('cust-name').value='';
+  document.getElementById('cust-desc').value='';
+  toast('✓ Vaja dodana','ok');
+  renderCustomExList();
+}
+function deleteCustomExercise(name){
+  if(!confirm('Izbrišem vajo "'+name+'"?'))return;
+  const list=getCustomExercises().filter(e=>e.n!==name);
+  saveCustomExercises(list);
+  renderCustomExList();
+  toast('Izbrisana','ok');
+}
+function renderCustomExList(){
+  const el=document.getElementById('custom-ex-list');if(!el)return;
+  const list=getCustomExercises();
+  if(list.length===0){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:.4rem;">Nobene shranjene vaje.</div>';return;}
+  el.innerHTML=list.map(e=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;padding:6px;border-bottom:.5px solid var(--border);font-size:12px;">
+    <div style="flex:1;min-width:0;">
+      <div style="color:var(--text);font-weight:500;">${e.n}</div>
+      <div style="color:var(--text3);font-size:10px;margin-top:2px;">${e.muscle} · ${e.cat==='compound'?'compound':'izolacija'}</div>
+      ${e.desc?`<div style="color:var(--text2);font-size:11px;margin-top:3px;line-height:1.3;">${e.desc}</div>`:''}
+    </div>
+    <button class="bk-item-btn del" onclick="deleteCustomExercise('${e.n.replace(/'/g,"\\'")}')">×</button>
+  </div>`).join('');
+}
+function initStepUI(){
+  const ks=document.getElementById('kg-step-sel');if(ks)ks.value=String(getKgStep());
+  const rs=document.getElementById('reps-step-sel');if(rs)rs.value=String(getRepsStep());
+}
+function stepKg(exKey,si,di,ei,cn,delta,isBarbell){
+  const inp=document.querySelector(`#row-${exKey}-${si} .wi`);
+  if(!inp)return;
+  const cur=parseFloat(inp.value)||0;
+  const newVal=Math.max(0,Math.round((cur+delta)*100)/100);
+  inp.value=newVal;
+  sv(exKey,si,'kg',String(newVal),di,ei,cn,isBarbell?1:0);
+}
+function stepReps(exKey,si,di,ei,cn,delta){
+  const inp=document.querySelector(`#row-${exKey}-${si} .ri`);
+  if(!inp)return;
+  const cur=parseInt(inp.value)||0;
+  const newVal=Math.max(0,cur+delta);
+  inp.value=newVal;
+  sv(exKey,si,'reps',String(newVal),di,ei,cn,0);
+}
 function useSwap(key,name){
   const swaps=getExSwaps();
   swaps[key]=name;
@@ -1241,6 +1472,34 @@ function useSwap(key,name){
   toast('✓ Vaja zamenjana','ok');
 }
 function useCustomSwap(key){const inp=document.getElementById('swci-'+key);if(!inp||!inp.value.trim())return;useSwap(key,inp.value.trim());}
+
+// === SWAP DB LIST + SEARCH ===
+function renderSwapDBList(exKey,query){
+  const q=(query||'').toLowerCase().trim();
+  // Združi: custom (z ⭐) + built-in DB
+  const customs=getCustomExercises().map(c=>({n:c.n,m:c.muscle,c:c.cat,d:c.desc||'',custom:true}));
+  const builtins=EXERCISE_DB.map(e=>({n:e.n,m:e.m,c:e.c,d:e.d,s:e.s,eq:e.eq,custom:false}));
+  let all=[...customs,...builtins];
+  if(q){
+    all=all.filter(e=>e.n.toLowerCase().includes(q)||e.m.toLowerCase().includes(q)||(e.s&&e.s.toLowerCase().includes(q))||(e.eq&&e.eq.toLowerCase().includes(q)));
+  }
+  if(all.length===0)return '<div style="font-size:11px;color:var(--text3);padding:.5rem;text-align:center;">Ni zadetkov.</div>';
+  return all.slice(0,50).map(e=>{
+    const star=e.custom?'⭐ ':'';
+    const eqIcon={barbell:'🏋',dumbbell:'🔔',cable:'🔗',machine:'⚙',bodyweight:'🤸',other:''}[e.eq]||'';
+    const meta=`${e.m}${e.s?' · '+e.s:''} · ${e.c==='compound'?'compound':'isolation'}`;
+    return `<div class="sw-item" onclick="useSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">
+      <div class="sw-item-name">${star}${eqIcon} ${e.n}</div>
+      <div class="sw-item-note">${meta}</div>
+      ${e.d?`<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.3;">${e.d.slice(0,140)}${e.d.length>140?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function filterSwapDB(exKey,query){
+  const el=document.getElementById('swdb-'+exKey);
+  if(el)el.innerHTML=renderSwapDBList(exKey,query);
+}
 function clearSwap(key){
   const swaps=getExSwaps();
   if(swaps[key]){delete swaps[key];saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
@@ -1859,44 +2118,143 @@ function renderSessHist(){
   const sessions=getSessions();
   const el=document.getElementById('sess-hist-content');if(!el)return;
   if(sessions.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">Še ni treningov.</div>';return;}
-  el.innerHTML=sessions.slice(0,30).map(s=>`<div class="sess-entry"><div class="sess-day">${s.dayName} — T${s.weekNum} · Cikel ${s.cycle}</div><div class="sess-meta">${s.date} · ${s.startTime}–${s.endTime} · <strong style="color:var(--green-text);">${s.durationMin} min</strong></div></div>`).join('');
+  el.innerHTML=sessions.slice(0,30).map((s,idx)=>`<div class="sess-entry">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+      <div style="flex:1;">
+        <div class="sess-day">${s.dayName} — T${s.weekNum} · Cikel ${s.cycle}</div>
+        <div class="sess-meta">${s.date} · ${s.startTime||'–'}–${s.endTime||'–'} · <strong style="color:var(--green-text);">${s.durationMin} min</strong></div>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="bk-item-btn" style="font-size:11px;" onclick="editSession(${idx})" title="Uredi">✎</button>
+        <button class="bk-item-btn del" style="font-size:11px;" onclick="deleteSession(${idx})" title="Izbriši">×</button>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+function editSession(idx){
+  const sessions=getSessions();
+  const s=sessions[idx];if(!s)return;
+  const newDur=prompt(`Trajanje sesije v minutah:\n${s.dayName} ${s.date}`,s.durationMin);
+  if(newDur===null)return;
+  const n=parseInt(newDur);
+  if(isNaN(n)||n<1||n>500){alert('Napačna vrednost (1-500 min)');return;}
+  s.durationMin=n;
+  // Posodobi tudi končni čas, če imamo začetni
+  if(s.startTime){
+    try{
+      const [h,m]=s.startTime.split(':').map(Number);
+      const endMs=new Date();endMs.setHours(h,m+n,0,0);
+      s.endTime=endMs.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
+    }catch(e){}
+  }
+  saveSessions(sessions);
+  renderSessHist();renderWeeklySummary();
+  toast('✓ Sesija posodobljena','ok');
+}
+
+function deleteSession(idx){
+  const sessions=getSessions();
+  const s=sessions[idx];if(!s)return;
+  if(!confirm(`Izbrišem sesijo ${s.dayName} ${s.date}?`))return;
+  sessions.splice(idx,1);
+  saveSessions(sessions);
+  renderSessHist();renderWeeklySummary();
+  toast('Izbrisana','ok');
+}
+
+function addManualSession(){
+  const date=prompt('Datum (npr. '+new Date().toISOString().split('T')[0]+'):',new Date().toISOString().split('T')[0]);
+  if(!date)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alert('Format mora biti YYYY-MM-DD');return;}
+  const dayChoice=prompt('Kateri dan?\n1 = Push A\n2 = Pull A\n3 = Noge\n4 = Push B\n5 = Pull B','1');
+  const dayIdx=parseInt(dayChoice)-1;
+  if(isNaN(dayIdx)||dayIdx<0||dayIdx>4){alert('Napačen dan');return;}
+  const dur=prompt('Trajanje v minutah:','60');
+  const durMin=parseInt(dur);
+  if(isNaN(durMin)||durMin<1||durMin>500){alert('Napačno trajanje');return;}
+  const week=prompt('Teden v ciklu (1-4):',String(cw+1));
+  const wn=parseInt(week);
+  if(isNaN(wn)||wn<1||wn>4){alert('Napačen teden');return;}
+  const sessions=getSessions();
+  const cyc=getCyc();
+  sessions.unshift({
+    date,
+    dayName:DAY_NAMES[dayIdx],
+    weekNum:wn,
+    cycle:cyc.num,
+    startTime:'',
+    endTime:'',
+    durationMin:durMin
+  });
+  saveSessions(sessions);
+  renderSessHist();renderWeeklySummary();
+  toast('✓ Sesija dodana','ok');
 }
 
 function renderWeeklySummary(){
   const sessions=getSessions();
   const all=getSets();
   const el=document.getElementById('sum-grid');const det=document.getElementById('sum-detail');if(!el)return;
-  // Get current week (last 7 days)
   const now=new Date();
   const weekAgo=new Date(now-7*24*3600*1000);
   const prevWeekAgo=new Date(now-14*24*3600*1000);
   const thisWeekSess=sessions.filter(s=>new Date(s.date)>=weekAgo);
   const prevWeekSess=sessions.filter(s=>new Date(s.date)>=prevWeekAgo&&new Date(s.date)<weekAgo);
-  // Total sets and volume this week
-  let thisSets=0,thisVol=0,prevSets=0,prevVol=0;
-  const cyc=getCyc();
-  // Simple estimate from session count
-  thisWeekSess.forEach(s=>{
-    // Count sets from that day's data — look up saved sets
-    for(let w=0;w<4;w++){
-      for(let ei=0;ei<PROG.days[s.dayName?DAY_NAMES.indexOf(s.dayName):0]?.ex?.length||0;ei++){
-        const key=sdk(s.cycle,w,DAY_NAMES.indexOf(s.dayName),ei);
-        if(all[key]){all[key].filter(x=>x.done).forEach(x=>{thisSets++;thisVol+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);});}
+  // Helper za štetje setov in volumna iz seznama sesij
+  function calcSetsAndVol(sessList){
+    let s=0,v=0;
+    sessList.forEach(sess=>{
+      const di=DAY_NAMES.indexOf(sess.dayName);
+      if(di<0||!PROG.days[di])return;
+      for(let w=0;w<4;w++){
+        for(let ei=0;ei<PROG.days[di].ex.length;ei++){
+          const key=sdk(sess.cycle,w,di,ei);
+          if(all[key]){all[key].filter(x=>x.done).forEach(x=>{s++;v+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);});}
+        }
       }
-    }
-  });
+    });
+    return {sets:s,vol:v};
+  }
+  const thisStats=calcSetsAndVol(thisWeekSess);
+  const prevStats=calcSetsAndVol(prevWeekSess);
   const trainDays=thisWeekSess.length;
   const totalMin=thisWeekSess.reduce((a,b)=>a+(b.durationMin||0),0);
   const prevDays=prevWeekSess.length;
   const prevMin=prevWeekSess.reduce((a,b)=>a+(b.durationMin||0),0);
-  function diff(cur,prev,unit){if(prev===0)return'';const d=cur-prev;const sign=d>0?'+':'';return`<span class="${d>0?'sum-up':d<0?'sum-down':'sum-same'}">${sign}${d}${unit}</span>`;}
+  function diff(cur,prev,unit){if(prev===0&&cur===0)return'';if(prev===0)return'';const d=cur-prev;const sign=d>0?'+':'';return`<span class="${d>0?'sum-up':d<0?'sum-down':'sum-same'}">${sign}${d}${unit}</span>`;}
+  // Streak — zaporedni tedni s vsaj 1 sesijo
+  const streak=calcStreak(sessions);
+  // Skupna statistika cikla
+  const cyc=getCyc();
+  const cycleSess=sessions.filter(s=>s.cycle===cyc.num);
+  const cycleStats=calcSetsAndVol(cycleSess);
+  const cycleMin=cycleSess.reduce((a,b)=>a+(b.durationMin||0),0);
   el.innerHTML=`
     <div class="sum-card"><div class="sum-val">${trainDays}</div><div class="sum-lbl">Treningi ta teden</div><div class="sum-diff">${diff(trainDays,prevDays,'')}</div></div>
     <div class="sum-card"><div class="sum-val">${totalMin}</div><div class="sum-lbl">Skupaj minut</div><div class="sum-diff">${diff(totalMin,prevMin,'min')}</div></div>
-    <div class="sum-card"><div class="sum-val">${thisSets}</div><div class="sum-lbl">Opravljene serije</div><div class="sum-diff">${diff(thisSets,prevSets,'')}</div></div>
-    <div class="sum-card"><div class="sum-val">${thisVol>0?Math.round(thisVol/1000)+'t':'—'}</div><div class="sum-lbl">Skupni volumen</div><div class="sum-diff">${thisVol>0&&prevVol>0?diff(Math.round(thisVol/1000),Math.round(prevVol/1000),'t'):''}</div></div>
+    <div class="sum-card"><div class="sum-val">${thisStats.sets}</div><div class="sum-lbl">Opravljene serije</div><div class="sum-diff">${diff(thisStats.sets,prevStats.sets,'')}</div></div>
+    <div class="sum-card"><div class="sum-val">${thisStats.vol>0?(thisStats.vol>=1000?Math.round(thisStats.vol/1000)+'t':Math.round(thisStats.vol)+'kg'):'—'}</div><div class="sum-lbl">Skupni volumen</div><div class="sum-diff">${prevStats.vol>0?diff(Math.round(thisStats.vol),Math.round(prevStats.vol),'kg'):''}</div></div>
+    <div class="sum-card"><div class="sum-val">🔥 ${streak}</div><div class="sum-lbl">Streak (tedni)</div><div class="sum-diff" style="font-size:10px;">${streak>=4?'odlično!':streak>=2?'gradiš ritem':'zacni nov streak'}</div></div>
+    <div class="sum-card"><div class="sum-val">${cycleSess.length}</div><div class="sum-lbl">Sesij v ciklu ${cyc.num}</div><div class="sum-diff" style="font-size:10px;">${cycleStats.vol>0?Math.round(cycleStats.vol/1000)+'t · '+cycleMin+' min':''}</div></div>
   `;
-  if(det)det.innerHTML=thisWeekSess.length>0?thisWeekSess.map(s=>`${s.date}: ${s.dayName} (${s.durationMin}min)`).join(' · '):'Ni treningov ta teden.';
+  if(det)det.innerHTML=thisWeekSess.length>0?thisWeekSess.map(s=>`${s.date}: <strong>${s.dayName}</strong> (${s.durationMin}min)`).join(' · '):'Ni treningov ta teden.';
+}
+
+// Streak — koliko zaporednih tednov je vsaj 1 sesija
+function calcStreak(sessions){
+  if(sessions.length===0)return 0;
+  const now=new Date();
+  let streak=0;
+  for(let w=0;w<104;w++){
+    const start=new Date(now-7*(w+1)*86400000);
+    const end=new Date(now-7*w*86400000);
+    const has=sessions.some(s=>{const d=new Date(s.date);return d>=start&&d<end;});
+    if(has)streak++;
+    else if(w===0)continue;  // ta teden še lahko trenira
+    else break;
+  }
+  return streak;
 }
 
 function renderRestPlan(){
@@ -1925,6 +2283,19 @@ function toggleRestDay(idx){
 function getBWGoal(){const v=parseFloat(localStorage.getItem('wt_bwgoal'));return isNaN(v)?80:v;}
 function saveBWGoal(v){const n=parseFloat(v);if(!isNaN(n)&&n>40&&n<200){localStorage.setItem('wt_bwgoal',n);renderBW();}}
 function initBWGoal(){const g=getBWGoal();const el=document.getElementById('bw-goal');if(el)el.value=g;}
+function editBW(date,curKg){
+  const newVal=prompt(`Nova teža za ${date}:`,curKg);
+  if(newVal===null)return;
+  const n=parseFloat(newVal);
+  if(isNaN(n)||n<30||n>250){alert('Napačna vrednost');return;}
+  const d=getBW();d[date]=n;saveBW(d);renderBW();
+  toast('✓ Teža posodobljena','ok');
+}
+function deleteBW(date){
+  if(!confirm(`Izbrišem vnos teže za ${date}?`))return;
+  const d=getBW();delete d[date];saveBW(d);renderBW();
+  toast('Izbrisano','ok');
+}
 
 function logBW(){
   const val=parseFloat(document.getElementById('bw-in').value);
@@ -1951,7 +2322,7 @@ function renderBW(){
   const pl=document.getElementById('bw-prog-label');if(pl)pl.textContent=`Napredek do ${goal}kg`;
   const sl=document.getElementById('bw-start-label');if(sl)sl.textContent=`Start: ${first}kg`;
   const gl=document.getElementById('bw-goal-label');if(gl)gl.textContent=`Cilj: ${goal}kg`;
-  document.getElementById('bw-log').innerHTML=entries.slice().reverse().slice(0,10).map((e,i,arr)=>{const prev=arr[i+1];const diff=prev?parseFloat(e[1])-parseFloat(prev[1]):0;const ds=diff!==0?`<span style="font-size:11px;color:${diff<0?'var(--green-text)':'var(--red-text)'}">${diff<0?'↓':'↑'}${Math.abs(diff).toFixed(1)}kg</span>`:'';return`<div class="bwe"><span>${e[0]}</span><span style="display:flex;gap:8px;align-items:center;">${ds}<strong style="color:var(--text);">${e[1]}kg</strong></span></div>`;}).join('');
+  document.getElementById('bw-log').innerHTML=entries.slice().reverse().slice(0,10).map((e,i,arr)=>{const prev=arr[i+1];const diff=prev?parseFloat(e[1])-parseFloat(prev[1]):0;const ds=diff!==0?`<span style="font-size:11px;color:${diff<0?'var(--green-text)':'var(--red-text)'}">${diff<0?'↓':'↑'}${Math.abs(diff).toFixed(1)}kg</span>`:'';return`<div class="bwe"><span>${e[0]}</span><span style="display:flex;gap:8px;align-items:center;">${ds}<strong style="color:var(--text);">${e[1]}kg</strong><button class="bk-item-btn" style="font-size:11px;padding:2px 6px;" onclick="editBW('${e[0]}',${e[1]})" title="Uredi">✎</button><button class="bk-item-btn del" style="font-size:11px;padding:2px 6px;" onclick="deleteBW('${e[0]}')" title="Izbriši">×</button></span></div>`;}).join('');
   const labels=entries.map(e=>e[0].slice(5)),vals=entries.map(e=>parseFloat(e[1]));
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
   const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',tc=isDark?'#9da3ae':'#666';
@@ -2941,7 +3312,13 @@ async function manualAutoBackup(){
   }
 }
 
-initTheme();initBWGoal();showDay(0);
+initTheme();initBWGoal();
+// Obnovi zadnji teden in dan
+const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
+const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
+if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===_lastWeek));}
+const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
+showDay(_initDay);
 // Obnovi morebiten aktivni session in rest timer
 restoreSession();restoreTimer();
 
