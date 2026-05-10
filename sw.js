@@ -1,6 +1,6 @@
 // Workout Tracker — Service Worker
 // Verzija — povečaj ko spremeniš katerokoli datoteko, da se cache osveži
-const VERSION = 'v1.4.0';
+const VERSION = 'v1.5.1';
 const CACHE_NAME = `workout-tracker-${VERSION}`;
 
 // Datoteke ki naj se cachirajo za offline delovanje
@@ -85,10 +85,13 @@ self.addEventListener('message', event => {
           tag: 'workout-rest-' + id,
           renotify: true,
           requireInteraction: true,
-          vibrate: [400, 150, 400, 150, 600, 150, 400],
+          vibrate: [600, 200, 600, 200, 800, 200, 600],
           silent: false,
           icon: './icon-192.png',
           badge: './icon-192.png',
+          actions: [
+            { action: 'open', title: '💪 Naprej' }
+          ],
           data: { url: './' }
         }).then(() => {
           activeTimers.delete(id);

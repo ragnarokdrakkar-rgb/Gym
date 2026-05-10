@@ -618,6 +618,14 @@ tr.is-drop{background:rgba(167,139,250,.04);}
       </select>
     </div>
     <button class="sb" onclick="testAlarm()" style="margin-top:.5rem;">▶ Testiraj alarm</button>
+    <div style="font-size:11px;color:var(--text3);margin-top:.75rem;line-height:1.4;background:var(--bg3);padding:.5rem;border-radius:6px;">
+      <strong style="color:var(--text2);">Če ne dobiš zvoka pri zaklenjenem zaslonu:</strong><br>
+      1. Telefon naj <strong>ne bo</strong> v Do Not Disturb / Tihem načinu<br>
+      2. iPhone: stikalo na strani naj <strong>ne</strong> kaže oranžno<br>
+      3. Android: Settings → Apps → Workout → Notifications → vklopi "Sound"<br>
+      4. Push obvestila zgoraj morajo biti vklopljena<br>
+      5. Test: pritisni ▶ Testiraj, počakaj 1s, zakleni zaslon → po 5s zazveni
+    </div>
   </div>
   <div class="card">
     <div class="ct">Google Sheets sync</div>
@@ -1077,7 +1085,6 @@ function showDay(idx){
   let html=`<div class="day-title">${d.title}</div><div class="day-sub">${d.sub}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${t.t}</span>`).join('')}</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${d.ex.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
-  html+=`<div class="cbox">Po treningu: 30 min hoja · 15% naklon · 3.4 km/h</div>`;
   html+=d.ex.map((e,i)=>renderEx(e,i,idx,wk,cyc.num)).join('');
   html+=`<div class="sl" style="margin-top:.5rem;">Opombe</div><textarea class="na" placeholder="Energija, bolečine, PR-ji..." oninput="saveNote('${nk}',this.value)">${nv}</textarea>`;
   document.getElementById('day-content').innerHTML=html;
@@ -1122,40 +1129,20 @@ function renderEx(e,ei,di,wk,cn){
     if(firstKg>0){const pl=calcPlatesFor(firstKg);plateHtml=pl?`<div class="platebox" id="pb-${exKey}"><strong>Vsaka stran:</strong> ${pl.each}<span class="pl-each">Palica ${pl.bar}kg + ${pl.perSide*2}kg = ${pl.total}kg</span></div>`:`<div class="platebox" id="pb-${exKey}">Ni možno sestaviti ${firstKg}kg s trenutnimi ploščami.</div>`;}
     else plateHtml=`<div class="platebox" id="pb-${exKey}" style="color:var(--text3);">Vnesi težo v S1 za prikaz plošč</div>`;
   }
-  const isBilat=isBilateralEx(e.n);
   const rows=Array.from({length:n},(_,si)=>{
     const s=sets[si]||{kg:'',reps:'',done:false};
     const kgVal=parseFloat(s.kg)||0;
-    const kgRVal=parseFloat(s.kgR)||0;
     const repsVal=parseFloat(s.reps)||0;
     const isDrop=!!s.drop;
-    // Volume — pri bilateralu sešteje obe strani
-    const vol=isBilat&&kgRVal?Math.round((kgVal+kgRVal)*repsVal):Math.round(kgVal*repsVal);
+    const vol=Math.round(kgVal*repsVal);
     const orm=s.kg&&s.reps?Math.round(kgVal*(1+repsVal/30)):'';
     const pls=isBarbell?platesShort(kgVal):{text:'',cls:''};
     const plMini=isBarbell?`<div class="pl-mini ${pls.cls}" id="pl-${exKey}-${si}">${pls.text}</div>`:'';
     const dropMark=isDrop?'<span class="set-type drop">D</span>':'';
-    // RPE chips
-    const rpeRow=`<div class="rpe-row" id="rpe-${exKey}-${si}">${[6,7,8,9,10].map(n=>{
-      const sel=s.rpe===n;
-      const cls=sel?(n>=9?' sel high':n>=8?' sel med':' sel'):'';
-      return `<button class="rpe-chip${cls}" onclick="setRpe('${exKey}',${si},${n},${di},${ei},${cn})">${n}</button>`;
-    }).join('')}</div>`;
-    // Quick weight chips (samo če set prazen in obstaja zgodovina)
-    const qwHtml=!s.kg?renderQuickWeights(exKey,si,di,ei,cn,e.n):'';
     // Note icon
     const noteIcon=`<span class="note-icon${s.note?' has':''}" onclick="openNote('${exKey}',${si},${di},${ei},${cn})" title="Opomba">${s.note?'📝':'＋'}</span>`;
-    // Bilateral input
-    let kgInputHtml;
-    if(isBilat){
-      kgInputHtml=`<div class="kg-bilat-wrap">
-        <input class="wi" type="number" inputmode="decimal" placeholder="L" value="${s.kg}" min="0" step="2.5" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})">
-        <input class="wi" type="number" inputmode="decimal" placeholder="D" value="${s.kgR||''}" min="0" step="2.5" onchange="sv('${exKey}',${si},'kgR',this.value,${di},${ei},${cn},0)">
-      </div>`;
-    } else {
-      kgInputHtml=`<input class="wi" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" min="0" step="2.5" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})">`;
-    }
-    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}${qwHtml}</td><td><input class="ri" type="number" inputmode="numeric" placeholder="pon" value="${s.reps}" min="0" step="1" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)">${rpeRow}</td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td style="white-space:nowrap;"><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button>${noteIcon}</td></tr>`;
+    const kgInputHtml=`<input class="wi" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" min="0" step="2.5" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})">`;
+    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td><input class="ri" type="number" inputmode="numeric" placeholder="pon" value="${s.reps}" min="0" step="1" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)"></td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td style="white-space:nowrap;"><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button>${noteIcon}</td></tr>`;
   }).join('');
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
@@ -1171,12 +1158,12 @@ function renderEx(e,ei,di,wk,cn){
   const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}" id="ec-${exKey}">
     <div class="ex-top">
-      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${e.n}</div></div>
+      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${getSwappedName(exKey,e.n)}</div></div>
       <div class="sp ${wk.pill}">${n} × ${wk.reps}</div>
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${swHasData?`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`:''}<button class="bilat-toggle${isBilat?' on':''}" onclick="toggleBilateral('${e.n.replace(/'/g,"\\'")}')" title="Bilateral L/D">L|D</button><button class="mic-btn" onclick="startVoiceInput('${exKey}',0,${di},${ei},${cn})" title="Voice input">🎤</button>${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${swHasData?`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`:''}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
       ${swHasData?swHasData.map(s=>`<div class="sw-item" onclick="useSwap('${exKey}','${s.n.replace(/'/g,"\\'")}')"><div class="sw-item-name">${s.n}</div><div class="sw-item-note">${s.note}</div></div>`).join(''):''}
       <div class="sw-custom-row">
@@ -1242,8 +1229,22 @@ function removeSet(exKey,di,ei,cn){
 }
 
 function toggleSwap(key){const p=document.getElementById('sw-'+key);if(p){swOpen[key]=!swOpen[key];p.classList.toggle('open',swOpen[key]);}}
-function useSwap(key,name){const el=document.getElementById('exn-'+key);if(el)el.textContent=name;const p=document.getElementById('sw-'+key);if(p){p.classList.remove('open');swOpen[key]=false;}}
+function getExSwaps(){try{return JSON.parse(localStorage.getItem('wt_exswap')||'{}');}catch{return {};}}
+function saveExSwaps(s){localStorage.setItem('wt_exswap',JSON.stringify(s));}
+function getSwappedName(exKey,origName){const s=getExSwaps();return s[exKey]||origName;}
+function useSwap(key,name){
+  const swaps=getExSwaps();
+  swaps[key]=name;
+  saveExSwaps(swaps);
+  const el=document.getElementById('exn-'+key);if(el)el.textContent=name;
+  const p=document.getElementById('sw-'+key);if(p){p.classList.remove('open');swOpen[key]=false;}
+  toast('✓ Vaja zamenjana','ok');
+}
 function useCustomSwap(key){const inp=document.getElementById('swci-'+key);if(!inp||!inp.value.trim())return;useSwap(key,inp.value.trim());}
+function clearSwap(key){
+  const swaps=getExSwaps();
+  if(swaps[key]){delete swaps[key];saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
+}
 
 function wuHint(e,sets){
   const fkg=parseFloat(sets[0]?.kg)||0;
@@ -1307,7 +1308,8 @@ function sv(key,si,field,val,di,ei,cn,isBarbell){
     if(PROG.days[di].ex[ei].m&&cw===0){const box=document.querySelector(`#ec-${key} .wubox`);if(box){const fkg=parseFloat(all[key][0]?.kg)||0;if(fkg>0){const type=PROG.days[di].ex[ei].n.toLowerCase().includes('squat')||PROG.days[di].ex[ei].n.toLowerCase().includes('deadlift')||PROG.days[di].ex[ei].n.toLowerCase().includes('leg press')?'lower':'upper';const wu=buildWU(fkg,type);box.innerHTML=`<strong>Ogrevanje:</strong> ${wu.map(w=>`${w.pct===0?'Palica':w.pct+'%'}→${w.kg}kg×${w.reps}`).join(' · ')}`;}}}
     if(isBarbell){
       updatePlMini(key,si,kg);
-      if(si===0)updatePlateBox(key,kg);
+      // Posodobi velik plate box ne glede na set — kaže zadnjo vneseno težo
+      if(kg>0)updatePlateBox(key,kg);
       // Posodobi tudi vrstice, ki so dobile auto-fill enako težo
       if(kg>0){
         for(let i=si+1;i<n;i++){
@@ -1515,13 +1517,25 @@ const LS_TIMER='wt_active_timer';
 
 function startT(key,secs){
   if(TM[key])clearInterval(TM[key]);
+  // Preveri notification permission ob vsakem startu — če manjka, prosi
+  if('Notification' in window){
+    if(Notification.permission==='default'){
+      Notification.requestPermission().then(p=>{
+        if(p!=='granted')toast('⚠️ Brez dovoljenja: ni zvoka pri zaklenjenem zaslonu','err');
+      });
+    } else if(Notification.permission==='denied'){
+      // Samo enkrat opozori — ne na vsakem timer startu
+      if(!localStorage.getItem('wt_notif_warned')){
+        toast('⚠️ Notif blokirane v Settings — ni zvoka v ozadju','err');
+        localStorage.setItem('wt_notif_warned','1');
+      }
+    }
+  }
   const endTs=Date.now()+secs*1000;
-  // Shrani aktivni timer
   localStorage.setItem(LS_TIMER,JSON.stringify({key,endTs}));
   const bar=document.getElementById('tb-'+key),cnt=document.getElementById('tc-'+key);
   if(!bar||!cnt)return;
   bar.classList.add('on');bar.classList.remove('flash');
-  // Scheduled notification (deluje tudi ko je tab v ozadju, na PWA/HTTPS)
   scheduleNotification(secs);
   const tick=()=>{
     const rem=Math.max(0,Math.ceil((endTs-Date.now())/1000));
@@ -1643,24 +1657,8 @@ function swMessage(msg){
   return false;
 }
 
-// === SESSION PERSISTENCE + WAKE LOCK ===
+// === SESSION PERSISTENCE ===
 const LS_SESS='wt_active_sess';
-let wakeLock=null;
-async function requestWakeLock(){
-  try{
-    if('wakeLock' in navigator){
-      wakeLock=await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release',()=>{wakeLock=null;});
-    }
-  }catch(e){}
-}
-function releaseWakeLock(){
-  if(wakeLock){try{wakeLock.release();}catch(e){}wakeLock=null;}
-}
-// Re-acquire wake lock ko se app vrne v ospredje
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&stRun&&!wakeLock){requestWakeLock();}
-});
 
 function toggleSess(){
   const dot=document.getElementById('sess-dot');
@@ -1671,7 +1669,7 @@ function toggleSess(){
     sessStart=new Date();stStart=Date.now();stRun=true;
     // Shrani v localStorage da preživi reload/zaprtje
     localStorage.setItem(LS_SESS,JSON.stringify({startMs:stStart,startISO:sessStart.toISOString(),dayIdx:cd,weekIdx:cw}));
-    requestWakeLock();
+
     if(dot)dot.classList.add('on');
     document.getElementById('st-b').textContent='Zaključi';
     document.getElementById('st-b').classList.add('active');
@@ -1681,7 +1679,7 @@ function toggleSess(){
   } else {
     clearInterval(stInt);stRun=false;
     localStorage.removeItem(LS_SESS);
-    releaseWakeLock();
+
     if(dot)dot.classList.remove('on');
     const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.floor(dur/60);
     const sessions=getSessions();
@@ -1706,7 +1704,7 @@ function restoreSession(){
     sessStart=new Date(s.startISO);stStart=s.startMs;stRun=true;
     if(typeof s.dayIdx==='number')cd=s.dayIdx;
     if(typeof s.weekIdx==='number')cw=s.weekIdx;
-    requestWakeLock();
+
     const dot=document.getElementById('sess-dot');if(dot)dot.classList.add('on');
     const btn=document.getElementById('st-b');if(btn){btn.textContent='Zaključi';btn.classList.add('active');}
     const ts=sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
@@ -2052,7 +2050,7 @@ async function exportData(){
     theme:localStorage.getItem(LS.theme)||'dark',
     // Nove dodatne nastavitve
     alarm:getAlarmSettings(),
-    bilateral:getBilatList(),
+    // bilateral removed
     collars:getCollars(),
     photos:photos,  // [{id, date, blob (base64)}]
     swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
@@ -2116,7 +2114,7 @@ function importData(){
         if(backup.theme) lss(LS.theme,backup.theme);
         // Nove nastavitve (v2)
         if(backup.alarm) saveAlarmSettings(backup.alarm);
-        if(backup.bilateral) localStorage.setItem(BILAT_KEY,JSON.stringify(backup.bilateral));
+        // bilateral restore removed
         if(backup.collars!==undefined) setCollars(backup.collars);
         if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
         if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
@@ -2449,62 +2447,6 @@ function quickKg(exKey,si,di,ei,cn,kg){
   const inp=document.querySelector(`#row-${exKey}-${si} .wi`);
   if(inp)inp.value=kg;
   sv(exKey,si,'kg',String(kg),di,ei,cn,isBarbell?1:0);
-}
-
-// --- Voice input ---
-let recognition=null;
-function startVoiceInput(exKey,si,di,ei,cn){
-  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
-    toast('Voice input ni podprt','err');return;
-  }
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  recognition=new SR();
-  recognition.lang='sl-SI';
-  recognition.interimResults=false;
-  recognition.continuous=false;
-  const btn=document.getElementById(`mic-${exKey}-${si}`);
-  if(btn)btn.classList.add('recording');
-  recognition.onresult=(ev)=>{
-    const text=ev.results[0][0].transcript.toLowerCase();
-    parseVoiceInput(text,exKey,si,di,ei,cn);
-  };
-  recognition.onerror=()=>{toast('Voice napaka','err');if(btn)btn.classList.remove('recording');};
-  recognition.onend=()=>{if(btn)btn.classList.remove('recording');};
-  recognition.start();
-  toast('🎤 Govori: npr. "100 kil 8"','ok');
-}
-function parseVoiceInput(text,exKey,si,di,ei,cn){
-  // "sto kil osem ponovitev" / "100 kg 8" / "100 8"
-  const numWords={"nič":0,"ena":1,"dva":2,"tri":3,"štiri":4,"pet":5,"šest":6,"sedem":7,"osem":8,"devet":9,"deset":10,"sto":100,"dvesto":200};
-  let normalized=text;
-  Object.entries(numWords).forEach(([w,n])=>{normalized=normalized.replace(new RegExp('\\b'+w+'\\b','g'),n);});
-  const nums=normalized.match(/\d+(\.\d+)?/g);
-  if(!nums||nums.length<2){toast('Ne razumem: "'+text+'"','err');return;}
-  const kg=parseFloat(nums[0]),reps=parseInt(nums[1]);
-  const isBarbell=BARBELL_EX.includes(PROG.days[di].ex[ei].n);
-  setKgVal(exKey,si,di,ei,cn,kg);
-  sv(exKey,si,'reps',String(reps),di,ei,cn,0);
-  const ri=document.querySelector(`#row-${exKey}-${si} .ri`);
-  if(ri)ri.value=reps;
-  toast(`✓ ${kg}kg × ${reps}`,'ok');
-}
-
-// --- Bilateral split ---
-const BILAT_KEY='wt_bilat_ex';
-function getBilatList(){try{return JSON.parse(localStorage.getItem(BILAT_KEY)||'[]');}catch{return [];}}
-function isBilateralEx(exName){
-  const list=getBilatList();
-  if(list.includes(exName))return true;
-  // Avto: vaje z "single-arm" v imenu
-  return /single-arm|unilateral/i.test(exName);
-}
-function toggleBilateral(exName){
-  const list=getBilatList();
-  const idx=list.indexOf(exName);
-  if(idx>=0)list.splice(idx,1);else list.push(exName);
-  localStorage.setItem(BILAT_KEY,JSON.stringify(list));
-  toast(idx>=0?'Bilateral izklopljen':'Bilateral vklopljen — L/D vnosi','ok');
-  showDay(cd);
 }
 
 // --- Plate calc collars ---
@@ -2844,7 +2786,7 @@ async function buildBackupJSON(includePhotos){
     bwgoal:getBWGoal(),
     theme:localStorage.getItem(LS.theme)||'dark',
     alarm:getAlarmSettings(),
-    bilateral:getBilatList(),
+    // bilateral removed
     collars:getCollars(),
     photos:photos,
     swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
@@ -2971,7 +2913,6 @@ async function restoreBackupFromIDB(id){
     if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
     if(backup.theme) lss(LS.theme,backup.theme);
     if(backup.alarm) saveAlarmSettings(backup.alarm);
-    if(backup.bilateral) localStorage.setItem(BILAT_KEY,JSON.stringify(backup.bilateral));
     if(backup.collars!==undefined) setCollars(backup.collars);
     if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
     if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
