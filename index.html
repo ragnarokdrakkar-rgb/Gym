@@ -567,6 +567,18 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
 </div>
 
+<!-- ADD EXERCISE POPUP -->
+<div class="note-pop" id="add-ex-pop">
+  <div class="note-pop-card" style="max-width:420px;max-height:80vh;display:flex;flex-direction:column;">
+    <h3>Dodaj vajo na ta dan</h3>
+    <input type="text" id="add-ex-search" placeholder="🔍 Išči (squat, biceps, cable...)" oninput="renderAddExList(this.value)" style="width:100%;padding:8px 10px;background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;margin-bottom:.5rem;box-sizing:border-box;">
+    <div id="add-ex-list" style="flex:1;overflow-y:auto;max-height:50vh;"></div>
+    <div class="note-pop-actions">
+      <button class="sb" onclick="closeAddExercise()" style="background:var(--bg3);">Prekliči</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOTE POPUP -->
 <div class="note-pop" id="note-pop">
   <div class="note-pop-card">
@@ -973,6 +985,7 @@ function getExtraSets(exKey){const sc=getSetCounts();return sc[exKey]||0;}
 function setExtraSets(exKey,val){const sc=getSetCounts();sc[exKey]=val;saveSetCounts(sc);}
 
 function nsf(di,ei,wk,exKey){
+  if(!PROG.days[di]||!PROG.days[di].ex[ei])return Math.max(1,4+getExtraSets(exKey));
   const base=wk.dl?3:(PROG.days[di].ex[ei].m?wk.sM:wk.sA);
   return Math.max(1,base+getExtraSets(exKey));
 }
@@ -1122,22 +1135,107 @@ const BIG_LIFTS = {
 
 function setWeek(w){cw=w;localStorage.setItem('wt_last_week',String(w));document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===w));showDay(cd);}
 
+// Pomožna funkcija: aktivni ex array za dan (privzete + extra)
+function getDayExercises(di){
+  if(!PROG.days[di])return [];
+  const extras=getExtraExercises(di);
+  return [...PROG.days[di].ex, ...extras];
+}
+
 function showDay(idx){
   cd=idx;
   localStorage.setItem('wt_last_day',String(idx));
   document.querySelectorAll('.dt').forEach((t,i)=>t.classList.toggle('active',i===idx));
   const d=PROG.days[idx],wk=PROG.weeks[cw],cyc=getCyc();
-  const done=d.ex.filter((_,i)=>allDone(idx,i)).length;
+  // Injectaj extra vaje v PROG.days (in-memory only — ne shrani)
+  const origLen=d._origLen!==undefined?d._origLen:d.ex.length;
+  if(d._origLen===undefined)d._origLen=d.ex.length;
+  const extras=getExtraExercises(idx);
+  // Reset ex na original + extra
+  d.ex=d.ex.slice(0,origLen).concat(extras);
+  const allEx=d.ex;
+  const done=allEx.filter((_,i)=>allDone(idx,i)).length;
   const nk=`notes-c${cyc.num}w${cw}d${idx}`;
   const nv=getNotes()[nk]||'';
   let html=`<div class="day-title">${d.title}</div><div class="day-sub">${d.sub}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${t.t}</span>`).join('')}</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
-  else{html+=`<div class="pg"><div class="pc"><div class="pn">${d.ex.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
-  html+=d.ex.map((e,i)=>renderEx(e,i,idx,wk,cyc.num)).join('');
+  else{html+=`<div class="pg"><div class="pc"><div class="pn">${allEx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
+  html+=allEx.map((e,i)=>renderEx(e,i,idx,wk,cyc.num,i>=origLen)).join('');
+  // Gumb za dodajanje vaje
+  html+=`<button class="sb" style="width:100%;margin-top:.75rem;background:var(--bg3);border:1px dashed var(--border2);" onclick="openAddExercise(${idx})">+ Dodaj vajo na ta dan</button>`;
   document.getElementById('day-content').innerHTML=html;
 }
 
-function renderEx(e,ei,di,wk,cn){
+// Extra vaje — shranjene per dan, vidne v vseh ciklih in tednih
+function getExtraExercises(di){
+  try{const all=JSON.parse(localStorage.getItem('wt_extra_ex')||'{}');return all[di]||[];}
+  catch{return [];}
+}
+function saveExtraExercises(di,arr){
+  try{const all=JSON.parse(localStorage.getItem('wt_extra_ex')||'{}');
+    all[di]=arr;localStorage.setItem('wt_extra_ex',JSON.stringify(all));
+  }catch{}
+}
+
+// Popup za izbiro vaje iz baze
+function openAddExercise(di){
+  const popup=document.getElementById('add-ex-pop');
+  popup.classList.add('on');
+  popup.dataset.di=di;
+  document.getElementById('add-ex-search').value='';
+  renderAddExList('');
+  setTimeout(()=>document.getElementById('add-ex-search').focus(),100);
+}
+function closeAddExercise(){document.getElementById('add-ex-pop').classList.remove('on');}
+function renderAddExList(query){
+  const q=(query||'').toLowerCase().trim();
+  const customs=getCustomExercises().map(c=>({n:c.n,m:c.muscle,c:c.cat,d:c.desc||'',custom:true}));
+  const builtins=EXERCISE_DB.map(e=>({n:e.n,m:e.m,c:e.c,d:e.d,s:e.s,eq:e.eq,custom:false}));
+  let all=[...customs,...builtins];
+  if(q){all=all.filter(e=>e.n.toLowerCase().includes(q)||e.m.toLowerCase().includes(q)||(e.s&&e.s.toLowerCase().includes(q))||(e.eq&&e.eq.toLowerCase().includes(q)));}
+  const list=document.getElementById('add-ex-list');
+  if(all.length===0){list.innerHTML='<div style="color:var(--text3);font-size:12px;padding:.5rem;text-align:center;">Ni zadetkov.</div>';return;}
+  list.innerHTML=all.slice(0,50).map(e=>{
+    const star=e.custom?'⭐ ':'';
+    const eqIcon={barbell:'🏋',dumbbell:'🔔',cable:'🔗',machine:'⚙',bodyweight:'🤸',other:''}[e.eq]||'';
+    return `<div class="sw-item" onclick="confirmAddExercise('${e.n.replace(/'/g,"\\'")}','${e.m}',${e.custom||e.c==='compound'?1:0})">
+      <div class="sw-item-name">${star}${eqIcon} ${e.n}</div>
+      <div class="sw-item-note">${e.m}${e.s?' · '+e.s:''} · ${e.c==='compound'?'compound':'isolation'}</div>
+    </div>`;
+  }).join('');
+}
+function confirmAddExercise(name,muscle,isMain){
+  const popup=document.getElementById('add-ex-pop');
+  const di=parseInt(popup.dataset.di);
+  if(isNaN(di))return;
+  const extras=getExtraExercises(di);
+  if(extras.find(e=>e.n===name)){toast('Vaja že obstaja na tem dnevu','err');return;}
+  // Privzeti parametri za novo vajo
+  const newEx={
+    n:name,
+    d:`${muscle} — moja dodatna vaja`,  // opis
+    r:90,  // rest 90s privzeto
+    rl:'90s',
+    m:false,  // ni glavna
+    extra:true  // marker
+  };
+  extras.push(newEx);
+  saveExtraExercises(di,extras);
+  closeAddExercise();
+  showDay(di);
+  toast('✓ Vaja dodana','ok');
+}
+function removeExtraExercise(di,localIdx){
+  if(!confirm('Odstranim to vajo? Vsi vneseni podatki bodo izgubljeni.'))return;
+  const extras=getExtraExercises(di);
+  if(localIdx<0||localIdx>=extras.length)return;
+  extras.splice(localIdx,1);
+  saveExtraExercises(di,extras);
+  showDay(di);
+  toast('Vaja odstranjena','ok');
+}
+
+function renderEx(e,ei,di,wk,cn,isExtra){
   const exKey=sdk(cn,cw,di,ei);
   const n=nsf(di,ei,wk,exKey);
   const all=getSets();
@@ -1211,7 +1309,7 @@ function renderEx(e,ei,di,wk,cn){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button><button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>${getExSwaps()[exKey]?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button><button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>${getExSwaps()[exKey]?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraExercise(${di},${ei-PROG.days[di].ex.length})">×</button>`:''}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
       <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}',this.value)" style="width:100%;margin-bottom:8px;">
       <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,'')}</div>
@@ -2425,7 +2523,11 @@ async function exportData(){
     collars:getCollars(),
     photos:photos,  // [{id, date, blob (base64)}]
     swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
-    sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}')
+    sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
+    extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
+    custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
+    kg_step:localStorage.getItem('wt_kg_step'),
+    reps_step:localStorage.getItem('wt_reps_step')
   };
   const json=JSON.stringify(backup,null,2);
   const blob=new Blob([json],{type:'application/json'});
@@ -2488,6 +2590,10 @@ function importData(){
         // bilateral restore removed
         if(backup.collars!==undefined) setCollars(backup.collars);
         if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
+        if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
+        if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
+        if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
+        if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
         if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
         // Photos restore (IndexedDB)
         if(backup.photos&&Array.isArray(backup.photos)&&backup.photos.length>0){
@@ -3161,7 +3267,11 @@ async function buildBackupJSON(includePhotos){
     collars:getCollars(),
     photos:photos,
     swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
-    sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}')
+    sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
+    extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
+    custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
+    kg_step:localStorage.getItem('wt_kg_step'),
+    reps_step:localStorage.getItem('wt_reps_step')
   });
 }
 
@@ -3286,6 +3396,10 @@ async function restoreBackupFromIDB(id){
     if(backup.alarm) saveAlarmSettings(backup.alarm);
     if(backup.collars!==undefined) setCollars(backup.collars);
     if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
+        if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
+        if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
+        if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
+        if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
     if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
     initTheme();initBWGoal();
     cw=0;cd=0;
